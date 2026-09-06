@@ -433,19 +433,276 @@ function distance(actual,target,range){
   return Math.max(0,1-Math.abs(actual-target)/range);
 }
 
-function scoreQuarter(q,c){
+/*
+  CURRENT-QUARTER STRATEGIC FIT
+  Measures whether the student's strategy is appropriate
+  for the current market situation.
+  Raw score = 0–25.
+*/
+function currentFitScore(q,c){
   const creative=distance(c.rational,q.target.rational,50);
   const aw=distance(c.awareness,q.target.awareness,25);
   const dig=distance(c.digital,q.target.digital,45);
   const ooh=distance(c.ooh,q.target.ooh,40);
   const soc=distance(c.social,q.target.social,40);
+
   const strategic=5*(.55*aw+.45*creative);
   const creativeScore=5*creative;
-  const media=7*((q.weights.digital*dig+q.weights.ooh*ooh+q.weights.social*soc)/(q.weights.digital+q.weights.ooh+q.weights.social));
+
+  const media=7*(
+    (q.weights.digital*dig+
+     q.weights.ooh*ooh+
+     q.weights.social*soc) /
+    (q.weights.digital+q.weights.ooh+q.weights.social)
+  );
+
   const totalAlloc=c.digital+c.ooh+c.social;
-  const efficiency=4*Math.max(0,1-Math.abs(totalAlloc-(q.target.digital+q.target.ooh+q.target.social))/70);
-  const integration=4*(.45*creative+.25*dig+.15*soc+.15*aw);
-  return Math.max(0,Math.min(25,strategic+creativeScore+media+efficiency+integration));
+
+  const efficiency=4*Math.max(
+    0,
+    1-Math.abs(
+      totalAlloc-
+      (q.target.digital+q.target.ooh+q.target.social)
+    )/70
+  );
+
+  const integration=4*(
+    .45*creative+
+    .25*dig+
+    .15*soc+
+    .15*aw
+  );
+
+  return Math.max(
+    0,
+    Math.min(
+      25,
+      strategic+
+      creativeScore+
+      media+
+      efficiency+
+      integration
+    )
+  );
+}
+
+
+/*
+  Converts a strategic movement into a score from 0–1.
+
+  Example:
+  If Rational communication is expected to increase by
+  approximately 30 points and the student increases it by 15,
+  the student receives approximately half the available
+  adaptation credit.
+*/
+function directionalCredit(change,direction,fullChange){
+
+  if(direction==="up"){
+    return Math.max(
+      0,
+      Math.min(1,change/fullChange)
+    );
+  }
+
+  if(direction==="down"){
+    return Math.max(
+      0,
+      Math.min(1,(-change)/fullChange)
+    );
+  }
+
+  return 0;
+}
+
+
+/*
+  ADAPTATION SCORE — MAXIMUM 13
+
+  Measures whether the student CHANGED strategy appropriately
+  when the market situation changed.
+*/
+function adaptationScore(index,c){
+
+  if(index===0) return 0;
+
+  const previousResult=results[index-1];
+
+  if(!previousResult || !previousResult.choices){
+    return 0;
+  }
+
+  const p=previousResult.choices;
+
+  let score=0;
+
+
+  /*
+    Q2 — COMPETITOR COUNTER-ATTACK
+
+    Expected response:
+    - Reduce pure awareness emphasis
+    - Become less rational / more emotionally differentiated
+    - Reduce launch-style OOH somewhat
+    - Increase Social Media
+  */
+  if(index===1){
+
+    score += 2 * directionalCredit(
+      c.awareness-p.awareness,
+      "down",
+      5
+    );
+
+    score += 5 * directionalCredit(
+      c.rational-p.rational,
+      "down",
+      12
+    );
+
+    score += 2 * directionalCredit(
+      c.ooh-p.ooh,
+      "down",
+      5
+    );
+
+    score += 4 * directionalCredit(
+      c.social-p.social,
+      "up",
+      5
+    );
+  }
+
+
+  /*
+    Q3 — ECONOMIC SLOWDOWN
+
+    Expected response:
+    - Reduce awareness ambition
+    - Increase rational/value communication strongly
+    - Increase efficient Digital allocation
+    - Cut inefficient OOH strongly
+    - Increase/maintain strong Social Media
+  */
+  else if(index===2){
+
+    score += 2 * directionalCredit(
+      c.awareness-p.awareness,
+      "down",
+      6
+    );
+
+    score += 4 * directionalCredit(
+      c.rational-p.rational,
+      "up",
+      30
+    );
+
+    score += 2 * directionalCredit(
+      c.digital-p.digital,
+      "up",
+      7
+    );
+
+    score += 3 * directionalCredit(
+      c.ooh-p.ooh,
+      "down",
+      10
+    );
+
+    score += 2 * directionalCredit(
+      c.social-p.social,
+      "up",
+      5
+    );
+  }
+
+
+  /*
+    Q4 — MARKET RECOVERY / CONVERSION
+
+    Expected response:
+    - Increase awareness ambition modestly
+    - Move away from recession-level rational messaging
+    - Allow some recovery in OOH/experiential
+    - Keep Digital + Social strong for conversion
+  */
+  else if(index===3){
+
+    score += 2 * directionalCredit(
+      c.awareness-p.awareness,
+      "up",
+      4
+    );
+
+    score += 4 * directionalCredit(
+      c.rational-p.rational,
+      "down",
+      15
+    );
+
+    score += 2 * directionalCredit(
+      c.ooh-p.ooh,
+      "up",
+      7
+    );
+
+    /*
+      Conversion media score.
+      55% or below = no additional credit.
+      70% Digital + Social = full 5 marks.
+    */
+    const conversionMix=c.digital+c.social;
+
+    const conversionCredit=Math.max(
+      0,
+      Math.min(
+        1,
+        (conversionMix-55)/15
+      )
+    );
+
+    score += 5*conversionCredit;
+  }
+
+  return Math.max(
+    0,
+    Math.min(13,score)
+  );
+}
+
+
+/*
+  FINAL QUARTER SCORE
+
+  Q1:
+  25 marks for selecting an appropriate launch strategy.
+
+  Q2–Q4:
+  12 marks = strategy appropriate for current situation
+  13 marks = appropriate adaptation from previous quarter
+*/
+function scoreQuarter(q,c){
+
+  const fit=currentFitScore(q,c);
+
+  // Q1 has no previous quarter.
+  if(current===0){
+    return fit;
+  }
+
+  const adaptation=adaptationScore(current,c);
+
+  const fitComponent=12*(fit/25);
+
+  const total=
+    fitComponent+
+    adaptation;
+
+  return Math.max(
+    0,
+    Math.min(25,total)
+  );
 }
 
 function feedbackFor(index,c){
