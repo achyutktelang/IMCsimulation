@@ -98,15 +98,7 @@
 
     <div id="decisionScreen" class="card">
       
-<div id="instructorSubmissionBox" style="margin:24px 0;padding:20px;border-radius:16px;background:#f6f7fb;border:1px solid #e2e5ec;text-align:center;">
-  <h3 style="margin:0 0 8px;">Submit Your Result</h3>
-  <p style="margin:0 0 15px;color:#555;">Once you have reviewed your final score, submit it to your instructor.</p>
-  <button id="submitResultBtn" onclick="submitFinalResult()" style="padding:12px 22px;border:0;border-radius:10px;font-weight:700;cursor:pointer;">
-    Submit Result to Instructor
-  </button>
-</div>
-
-<h2 id="qTitle"></h2>
+      <h2 id="qTitle"></h2>
       <div id="scenario" class="scenario"></div>
 
       <div class="budget">
@@ -208,6 +200,15 @@
         </tbody>
       </table>
     </div>
+    <div class="card" id="finalActionsCard">
+      <h2>Save / Submit Your Result</h2>
+      <p class="muted">Your four quarter results are now complete. You can compare them, download individual quarter files, download the complete simulation record, or submit the final score to your instructor.</p>
+      <div class="vc-nav">
+        <button class="vc-action vc-secondary" onclick="vcShowHistory()">📊 Compare Results</button>
+        <button class="vc-action vc-secondary" onclick="vcDownloadAll()">⬇ Download All Results</button>
+        <button id="submitResultBtn" class="vc-action vc-primary" onclick="submitFinalResult()">Submit Result to Instructor</button>
+      </div>
+    </div>
     <div class="card debrief">
       <h2>Debrief Questions</h2>
       <ol>
@@ -217,10 +218,31 @@
         <li>Did your creative appeal change as the market changed?</li>
         <li>How did you balance awareness-building with conversion?</li>
       </ol>
-      <button class="secondary" onclick="location.reload()">Start New Simulation</button>
+      <button class="secondary" onclick="vcStartNewSimulation()">Start New Simulation</button>
     </div>
   </section>
 </div>
+
+
+<style>
+.vc-nav{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.vc-nav button,.vc-action{border:0;border-radius:10px;padding:10px 15px;font-weight:700;cursor:pointer}
+.vc-secondary{background:#eef1f6;color:#172033}
+.vc-primary{background:#111827;color:#fff}
+.vc-toolbar{display:none;align-items:center;justify-content:space-between;gap:12px;margin:0 0 18px;padding:12px 14px;border:1px solid #e2e5ec;border-radius:14px;background:#fff;box-shadow:0 5px 20px rgba(30,50,80,.05)}
+.vc-toolbar.visible{display:flex}
+.vc-toolbar .vc-nav{margin:0}
+.vc-overlay{position:fixed;inset:0;background:rgba(17,24,39,.66);z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px}
+.vc-modal{background:#fff;width:min(1050px,100%);max-height:90vh;overflow:auto;border-radius:18px;padding:24px;box-shadow:0 24px 70px rgba(0,0,0,.32)}
+.vc-table{width:100%;border-collapse:collapse;font-size:14px}
+.vc-table th,.vc-table td{padding:10px;border-bottom:1px solid #e7e9ee;text-align:left;vertical-align:top}
+.vc-table th{font-weight:800;color:#4b5563}
+.vc-note{font-size:13px;color:#667085;line-height:1.5}
+.vc-download-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}
+.vc-download-grid button{width:100%}
+#vcBackBtn{display:none;position:fixed;left:16px;bottom:16px;z-index:9998;box-shadow:0 5px 18px rgba(0,0,0,.12)}
+@media(max-width:760px){.vc-toolbar{align-items:flex-start;flex-direction:column}.vc-download-grid{grid-template-columns:1fr 1fr}.vc-modal{padding:16px}.vc-table{font-size:12px}.vc-table th,.vc-table td{padding:7px}}
+</style>
 
 <script>
 const quarters = [
@@ -268,16 +290,102 @@ const quarters = [
   }
 ];
 
-let current=0, results=[], choices={};
+const VC_HISTORY_KEY="voltcharge_imc_history_v3";
+let current=0;
+let results=[];
+let choices={};
+let drafts={};
+window.vcHistory=[];
+
+function qLabel(index){ return `Q${index+1}`; }
+function simulationComplete(){ return results.filter(Boolean).length===4; }
+function moneyCr(value){ return `₹${Number(value).toFixed(1)} Cr`; }
+
+function getChoicesFromUI(){
+  return {
+    awareness:+document.getElementById("awareness").value,
+    rational:+document.getElementById("rational").value,
+    digital:+document.getElementById("digital").value,
+    ooh:+document.getElementById("ooh").value,
+    social:+document.getElementById("social").value
+  };
+}
+
+function applyChoicesToUI(c){
+  document.getElementById("awareness").value=c.awareness;
+  document.getElementById("rational").value=c.rational;
+  document.getElementById("digital").value=c.digital;
+  document.getElementById("ooh").value=c.ooh;
+  document.getElementById("social").value=c.social;
+  updateUI(false);
+}
+
+function defaultChoices(){
+  return {awareness:25,rational:50,digital:35,ooh:20,social:20};
+}
+
+function saveHistory(){
+  localStorage.setItem(VC_HISTORY_KEY,JSON.stringify(window.vcHistory));
+}
+
+function syncHistoryFromResults(){
+  window.vcHistory=results.map((r,i)=>r?{
+    quarter:qLabel(i),
+    quarterIndex:i,
+    title:quarters[i].title,
+    time:r.time,
+    studentName:sessionStorage.getItem("vcStudent")||"",
+    rollNo:sessionStorage.getItem("vcRoll")||"",
+    decisions:r.choices,
+    awareness:r.awareness,
+    reach:r.reach,
+    leads:r.leads,
+    sales:r.sales,
+    revenue:r.revenue,
+    roi:r.roi,
+    score:r.score,
+    feedback:r.feedback
+  }:null).filter(Boolean);
+  saveHistory();
+}
+
+function vcRecordQuarter(index,result){
+  const item={
+    quarter:qLabel(index), quarterIndex:index, title:quarters[index].title,
+    time:result.time, studentName:sessionStorage.getItem("vcStudent")||"",
+    rollNo:sessionStorage.getItem("vcRoll")||"", decisions:result.choices,
+    awareness:result.awareness, reach:result.reach, leads:result.leads,
+    sales:result.sales, revenue:result.revenue, roi:result.roi,
+    score:result.score, feedback:result.feedback
+  };
+  const pos=window.vcHistory.findIndex(x=>x.quarterIndex===index);
+  if(pos>=0) window.vcHistory[pos]=item; else window.vcHistory.push(item);
+  window.vcHistory.sort((a,b)=>a.quarterIndex-b.quarterIndex);
+  saveHistory();
+}
+
+function setToolbarVisible(visible){
+  const toolbar=document.getElementById("vcToolbar");
+  const back=document.getElementById("vcBackBtn");
+  if(toolbar) toolbar.classList.toggle("visible",visible);
+  if(back) back.style.display=visible?"block":"none";
+}
 
 function startGame(){
   const name=document.getElementById("studentName").value.trim();
   const roll=document.getElementById("rollNo").value.trim();
   if(!name || !roll){alert("Please enter your name and roll number.");return;}
+
   sessionStorage.setItem("vcStudent",name);
   sessionStorage.setItem("vcRoll",roll);
+  current=0; results=[]; choices={}; drafts={}; window.vcHistory=[];
+  localStorage.removeItem(VC_HISTORY_KEY);
+  window.finalResults=null;
+
   document.getElementById("start").classList.add("hidden");
+  document.getElementById("final").classList.add("hidden");
   document.getElementById("game").classList.remove("hidden");
+  setToolbarVisible(true);
   loadQuarter();
 }
 
@@ -291,31 +399,23 @@ function loadQuarter(){
   document.getElementById("qTitle").textContent=q.title;
   document.getElementById("scenario").innerHTML=q.situation;
   document.getElementById("budgetDisplay").textContent=`₹${q.budget} crore`;
-  resetChoices();
+  applyChoicesToUI(drafts[current]||defaultChoices());
 }
 
 function resetChoices(){
-  document.getElementById("awareness").value=25;
-  document.getElementById("rational").value=50;
-  document.getElementById("digital").value=35;
-  document.getElementById("ooh").value=20;
-  document.getElementById("social").value=20;
-  updateUI();
+  applyChoicesToUI(defaultChoices());
+  drafts[current]=getChoicesFromUI();
 }
 
-function updateUI(){
-  const a=+document.getElementById("awareness").value;
-  const r=+document.getElementById("rational").value;
-  const d=+document.getElementById("digital").value;
-  const o=+document.getElementById("ooh").value;
-  const s=+document.getElementById("social").value;
-  document.getElementById("awarenessVal").textContent=a;
-  document.getElementById("rationalVal").textContent=r;
-  document.getElementById("emotionalVal").textContent=100-r;
-  document.getElementById("digitalVal").textContent=d;
-  document.getElementById("oohVal").textContent=o;
-  document.getElementById("socialVal").textContent=s;
-  const total=d+o+s;
+function updateUI(saveDraft=true){
+  const c=getChoicesFromUI();
+  document.getElementById("awarenessVal").textContent=c.awareness;
+  document.getElementById("rationalVal").textContent=c.rational;
+  document.getElementById("emotionalVal").textContent=100-c.rational;
+  document.getElementById("digitalVal").textContent=c.digital;
+  document.getElementById("oohVal").textContent=c.ooh;
+  document.getElementById("socialVal").textContent=c.social;
+  const total=c.digital+c.ooh+c.social;
   const msg=document.getElementById("allocationMessage");
   if(total>100){
     msg.textContent=`Media allocation: ${total}% — reduce by ${total-100} percentage points.`;
@@ -326,6 +426,7 @@ function updateUI(){
     msg.className="alloc-total good";
     document.getElementById("lockBtn").disabled=false;
   }
+  if(saveDraft && !document.getElementById("decisionScreen").classList.contains("hidden")) drafts[current]={...c};
 }
 
 function distance(actual,target,range){
@@ -338,8 +439,6 @@ function scoreQuarter(q,c){
   const dig=distance(c.digital,q.target.digital,45);
   const ooh=distance(c.ooh,q.target.ooh,40);
   const soc=distance(c.social,q.target.social,40);
-
-  // Hidden internal scoring: 5 + 5 + 7 + 4 + 4 = 25.
   const strategic=5*(.55*aw+.45*creative);
   const creativeScore=5*creative;
   const media=7*((q.weights.digital*dig+q.weights.ooh*ooh+q.weights.social*soc)/(q.weights.digital+q.weights.ooh+q.weights.social));
@@ -349,25 +448,40 @@ function scoreQuarter(q,c){
   return Math.max(0,Math.min(25,strategic+creativeScore+media+efficiency+integration));
 }
 
+function feedbackFor(index,c){
+  const comments=[];
+  if(c.awareness>38) comments.push("Your awareness ambition was high; ambitious objectives require strong media support.");
+  else if(c.awareness<12) comments.push("Your conservative awareness objective limited the scale of the communication opportunity.");
+  if(index===1 && c.rational>65) comments.push("The competitor's rational positioning created an opportunity for VoltCharge to differentiate rather than mirror the message.");
+  if(index===2 && c.ooh>20) comments.push("OOH was relatively inefficient during the slowdown, reducing the effectiveness of the media investment.");
+  if(index===2 && c.rational<45) comments.push("The market became more price-conscious, so stronger value and practical-benefit communication would have helped.");
+  if(index===3 && c.social+c.digital<55) comments.push("The final push needed stronger digital/social support to convert awareness into action.");
+  if(comments.length===0){
+    if(index===0) comments.push("Your launch created a credible platform for building awareness and consideration.");
+    if(index===1) comments.push("Your response shows an attempt to differentiate while maintaining market relevance.");
+    if(index===2) comments.push("Your media choices show adaptation to tighter budgets and a more value-conscious consumer.");
+    if(index===3) comments.push("Your strategy reflects the shift from awareness-building toward conversion and sales.");
+  }
+  return comments.join(" ");
+}
+
 function runQuarter(){
   const q=quarters[current];
-  const c={
-    awareness:+document.getElementById("awareness").value,
-    rational:+document.getElementById("rational").value,
-    digital:+document.getElementById("digital").value,
-    ooh:+document.getElementById("ooh").value,
-    social:+document.getElementById("social").value
-  };
-  choices=c;
+  const c=getChoicesFromUI();
+  const totalAlloc=c.digital+c.ooh+c.social;
+  if(totalAlloc>100){alert("Media allocation cannot exceed 100%.");return;}
+
+  choices={...c}; drafts[current]={...c};
   const internalScore=scoreQuarter(q,c);
   const quality=0.72+(internalScore/25)*0.42;
   const noise=0.94+Math.random()*0.12;
 
   let awareness;
-  if(current===0) awareness=10 + (c.awareness*0.62 + internalScore*0.30)*quality;
+  if(current===0) awareness=10+(c.awareness*0.62+internalScore*0.30)*quality;
   else {
-    const prev=results[current-1].awareness;
-    awareness=Math.min(92,prev + (c.awareness*0.38 + internalScore*0.28)*quality);
+    const prev=results[current-1];
+    if(!prev){alert("The previous quarter result is missing. Please run quarters in order.");return;}
+    awareness=Math.min(92,prev.awareness+(c.awareness*0.38+internalScore*0.28)*quality);
   }
   awareness=Math.max(10,Math.min(92,awareness));
 
@@ -377,284 +491,280 @@ function runQuarter(){
   const sales=Math.max(0,Math.round(q.baseSales*(0.65+quality*.35)*(0.72+awareness/100*.45)*conversion/0.13*noise));
   const revenue=(sales*(q.baseRevenue*10000000/q.baseSales))/10000000;
   const roi=revenue/q.budget;
+  const result={
+    awareness,reach,leads,sales,revenue,roi,score:internalScore,
+    choices:{...c}, feedback:feedbackFor(current,c), time:new Date().toISOString()
+  };
 
-  results.push({awareness,reach,leads,sales,revenue,roi,score:internalScore,choices:c});
-  showResult(awareness,reach,leads,sales,revenue,roi);
+  // Critical integration: the simulation result and saved/downloadable result are the SAME object.
+  results[current]=result;
+  vcRecordQuarter(current,result);
+  showSavedQuarter(current);
 }
 
-function showResult(awareness,reach,leads,sales,revenue,roi){
+function populateResult(index){
+  const r=results[index];
+  if(!r) return;
+  choices={...r.choices};
+  document.getElementById("resultTitle").textContent=`${quarters[index].title} — Market Response`;
+  document.getElementById("rAwareness").textContent=r.awareness.toFixed(0)+"%";
+  document.getElementById("rReach").textContent=r.reach.toFixed(1)+"M";
+  document.getElementById("rLeads").textContent=Math.round(r.leads).toLocaleString();
+  document.getElementById("rSales").textContent=r.sales.toLocaleString();
+  document.getElementById("rRevenue").textContent=moneyCr(r.revenue);
+  document.getElementById("rROI").textContent=r.roi.toFixed(2)+"×";
+  document.getElementById("rDigital").textContent=(quarters[index].budget*r.choices.digital/100).toFixed(2)+" Cr";
+  document.getElementById("rSocial").textContent=(quarters[index].budget*r.choices.social/100).toFixed(2)+" Cr";
+  document.getElementById("feedbackText").textContent=r.feedback;
+  document.getElementById("nextBtn").textContent=index===3?"View Final Performance":"Next Quarter";
+}
+
+function showSavedQuarter(index){
+  if(!results[index]) return;
+  current=index;
+  document.getElementById("start").classList.add("hidden");
+  document.getElementById("final").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+  document.getElementById("quarterPill").classList.remove("hidden");
+  document.getElementById("quarterPill").textContent=`Quarter ${index+1} of 4`;
+  document.getElementById("progressBar").style.width=((index+1)*25)+"%";
   document.getElementById("decisionScreen").classList.add("hidden");
   document.getElementById("resultScreen").classList.remove("hidden");
-  document.getElementById("resultTitle").textContent=`${quarters[current].title} — Market Response`;
-  document.getElementById("rAwareness").textContent=awareness.toFixed(0)+"%";
-  document.getElementById("rReach").textContent=reach.toFixed(1)+"M";
-  document.getElementById("rLeads").textContent=Math.round(leads).toLocaleString();
-  document.getElementById("rSales").textContent=sales.toLocaleString();
-  document.getElementById("rRevenue").textContent="₹"+revenue.toFixed(1)+" Cr";
-  document.getElementById("rROI").textContent=roi.toFixed(2)+"×";
-  document.getElementById("rDigital").textContent=(quarters[current].budget*choices.digital/100).toFixed(2)+" Cr";
-  document.getElementById("rSocial").textContent=(quarters[current].budget*choices.social/100).toFixed(2)+" Cr";
-  document.getElementById("feedbackText").textContent=feedback();
-  document.getElementById("nextBtn").textContent=current===3?"View Final Performance":"Next Quarter";
-}
-
-function feedback(){
-  const q=quarters[current], c=choices;
-  const comments=[];
-  if(c.awareness>38) comments.push("Your awareness ambition was high; ambitious objectives require strong media support.");
-  else if(c.awareness<12) comments.push("Your conservative awareness objective limited the scale of the communication opportunity.");
-  if(current===1 && c.rational>65) comments.push("The competitor's rational positioning created an opportunity for VoltCharge to differentiate rather than mirror the message.");
-  if(current===2 && c.ooh>20) comments.push("OOH was relatively inefficient during the slowdown, reducing the effectiveness of the media investment.");
-  if(current===2 && c.rational<45) comments.push("The market became more price-conscious, so stronger value and practical-benefit communication would have helped.");
-  if(current===3 && c.social+c.digital<55) comments.push("The final push needed stronger digital/social support to convert awareness into action.");
-  if(comments.length===0){
-    if(current===0) comments.push("Your launch created a credible platform for building awareness and consideration.");
-    if(current===1) comments.push("Your response shows an attempt to differentiate while maintaining market relevance.");
-    if(current===2) comments.push("Your media choices show adaptation to tighter budgets and a more value-conscious consumer.");
-    if(current===3) comments.push("Your strategy reflects the shift from awareness-building toward conversion and sales.");
-  }
-  return comments.join(" ");
+  populateResult(index);
+  setToolbarVisible(true);
 }
 
 function nextQuarter(){
   if(current===3){showFinal();return;}
-  current++;
-  loadQuarter();
+  const next=current+1;
+  current=next;
+  if(results[current]) showSavedQuarter(current);
+  else loadQuarter();
 }
 
 function showFinal(){
+  if(!simulationComplete()){alert("Please complete all four quarters first.");return;}
   document.getElementById("game").classList.add("hidden");
   document.getElementById("quarterPill").classList.add("hidden");
   document.getElementById("final").classList.remove("hidden");
-  const total=Math.round(results.reduce((sum,r)=>sum+r.score,0));
+  setToolbarVisible(true);
+
+  const total=Math.round(results.reduce((sum,r)=>sum+(r?.score||0),0));
   document.getElementById("finalScore").textContent=total+"/100";
-  let grade=total>=90?"Outstanding IMC Strategist":total>=80?"Excellent":total>=70?"Good":total>=60?"Satisfactory":total>=50?"Needs Improvement":"Weak Strategic Performance";
+  const grade=total>=90?"Outstanding IMC Strategist":total>=80?"Excellent":total>=70?"Good":total>=60?"Satisfactory":total>=50?"Needs Improvement":"Weak Strategic Performance";
   document.getElementById("finalGrade").textContent=grade;
-  const name=sessionStorage.getItem("vcStudent"), roll=sessionStorage.getItem("vcRoll");
+  const name=sessionStorage.getItem("vcStudent")||"";
+  const roll=sessionStorage.getItem("vcRoll")||"";
   document.getElementById("studentSummary").textContent=`${name} • Roll No. ${roll}`;
 
-  // Make the completed result available to the instructor-submission button.
-  window.finalResults = {
-    student: { name: name || "", roll: roll || "" },
-    totalScore: total,
-    grade: grade,
-    scores: results.map(r => Math.round(r.score))
+  window.finalResults={
+    student:{name,roll}, totalScore:total, grade,
+    scores:results.map(r=>Math.round(r.score)),
+    quarters:results.map((r,i)=>({quarter:qLabel(i),...r}))
   };
 
   results.forEach((r,i)=>{
     document.getElementById("dA"+(i+1)).textContent=r.awareness.toFixed(0)+"%";
     document.getElementById("dS"+(i+1)).textContent=r.sales.toLocaleString();
-    document.getElementById("dR"+(i+1)).textContent="₹"+r.revenue.toFixed(1)+" Cr";
+    document.getElementById("dR"+(i+1)).textContent=moneyCr(r.revenue);
     document.getElementById("dROI"+(i+1)).textContent=r.roi.toFixed(2)+"×";
   });
+  syncHistoryFromResults();
 }
-updateUI();
+
+function csvCell(v){ return `"${String(v??"").replaceAll('"','""')}"`; }
+function downloadCSV(filename,rows){
+  const csv="\ufeff"+rows.map(row=>row.map(csvCell).join(",")).join("\n");
+  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  const a=document.createElement("a");
+  a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function getSavedQuarter(q){
+  const index=typeof q==="number"?q:Number(String(q).replace(/\D/g,""))-1;
+  return window.vcHistory.find(x=>x.quarterIndex===index);
+}
+
+function vcDownloadQuarter(q){
+  const x=getSavedQuarter(q);
+  if(!x){alert("No saved result for this quarter yet.");return;}
+  const d=x.decisions||{};
+  const other=Math.max(0,100-(Number(d.digital||0)+Number(d.ooh||0)+Number(d.social||0)));
+  const rows=[
+    ["VoltCharge India – Strategic IMC Simulation",""],
+    ["Student Name",x.studentName],["Roll Number",x.rollNo],
+    ["Quarter",x.quarter],["Scenario",x.title],["Saved",new Date(x.time).toLocaleString()],
+    ["",""],["DECISIONS",""],
+    ["Awareness Objective",`${d.awareness}%`],["Creative Appeal",`${d.rational}% Rational / ${100-Number(d.rational||0)}% Emotional`],
+    ["Digital & OTT",`${d.digital}%`],["OOH & Experiential",`${d.ooh}%`],["Social Media",`${d.social}%`],["Other / Traditional",`${other}%`],
+    ["",""],["RESULTS",""],
+    ["Brand Awareness",`${Number(x.awareness).toFixed(0)}%`],["Estimated Reach",`${Number(x.reach).toFixed(1)}M`],
+    ["Leads",Math.round(Number(x.leads))],["Estimated Sales",x.sales],["Revenue",moneyCr(x.revenue)],["ROI",`${Number(x.roi).toFixed(2)}×`],
+    ["Management Feedback",x.feedback]
+  ];
+  if(simulationComplete()) rows.push(["Quarter Score",Math.round(Number(x.score))+"/25"]);
+  else rows.push(["Quarter Score","Hidden until Q4 is completed"]);
+  downloadCSV(`VoltCharge_${x.quarter}_Result.csv`,rows);
+}
+
+function vcDownloadAll(){
+  if(!window.vcHistory.length){alert("No quarter results have been saved yet.");return;}
+  const complete=simulationComplete();
+  const rows=[["Student Name","Roll Number","Quarter","Awareness Objective %","Rational %","Emotional %","Digital %","OOH %","Social %","Other/Traditional %","Brand Awareness %","Reach (M)","Leads","Sales","Revenue (Cr)","ROI","Quarter Score","Feedback"]];
+  [...window.vcHistory].sort((a,b)=>a.quarterIndex-b.quarterIndex).forEach(x=>{
+    const d=x.decisions||{};
+    const other=Math.max(0,100-(Number(d.digital||0)+Number(d.ooh||0)+Number(d.social||0)));
+    rows.push([x.studentName,x.rollNo,x.quarter,d.awareness,d.rational,100-Number(d.rational||0),d.digital,d.ooh,d.social,other,Number(x.awareness).toFixed(0),Number(x.reach).toFixed(1),Math.round(Number(x.leads)),x.sales,Number(x.revenue).toFixed(2),Number(x.roi).toFixed(2),complete?Math.round(Number(x.score)):"Hidden",x.feedback]);
+  });
+  if(complete && window.finalResults) rows.push([], ["Final Score",window.finalResults.totalScore+"/100"],["Performance",window.finalResults.grade]);
+  downloadCSV("VoltCharge_All_Quarter_Results.csv",rows);
+}
+
+function vcShowHistory(){
+  const old=document.getElementById("vcHistoryPanel");
+  if(old) old.remove();
+  const h=[...window.vcHistory].sort((a,b)=>a.quarterIndex-b.quarterIndex);
+  const overlay=document.createElement("div");
+  overlay.id="vcHistoryPanel"; overlay.className="vc-overlay";
+  const complete=simulationComplete();
+  const quarterHeaders=[0,1,2,3].map(i=>`<th>${results[i]?qLabel(i):"—"}</th>`).join("");
+  const val=(i,fn)=>results[i]?fn(results[i]):"—";
+  const row=(label,fn)=>`<tr><td><strong>${label}</strong></td>${[0,1,2,3].map(i=>`<td>${val(i,fn)}</td>`).join("")}</tr>`;
+  const downloadButtons=[0,1,2,3].map(i=>results[i]?`<button class="vc-action vc-secondary" onclick="vcDownloadQuarter(${i})">⬇ ${qLabel(i)}</button>`:`<button class="vc-action vc-secondary" disabled>⬇ ${qLabel(i)}</button>`).join("");
+  const scoreRow=complete?row("Quarter Score",r=>`${Math.round(r.score)}/25`):"";
+
+  overlay.innerHTML=`<div class="vc-modal">
+    <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap">
+      <div><h2 style="margin-bottom:6px">Compare Quarter Results</h2><p class="vc-note" style="margin-top:0">Each completed quarter is saved automatically when you click “Lock Strategy & Run Quarter”. Internal quarter scores remain hidden until Q4 is complete.</p></div>
+      <button class="vc-action vc-secondary" onclick="document.getElementById('vcHistoryPanel').remove()">✕ Close</button>
+    </div>
+    <div style="overflow:auto"><table class="vc-table"><thead><tr><th>Metric / Decision</th>${quarterHeaders}</tr></thead><tbody>
+      ${row("Awareness Objective",r=>`${r.choices.awareness}%`)}
+      ${row("Creative Appeal",r=>`${r.choices.rational}% Rational / ${100-r.choices.rational}% Emotional`)}
+      ${row("Digital & OTT",r=>`${r.choices.digital}%`)}
+      ${row("OOH & Experiential",r=>`${r.choices.ooh}%`)}
+      ${row("Social Media",r=>`${r.choices.social}%`)}
+      ${row("Other / Traditional",r=>`${100-r.choices.digital-r.choices.ooh-r.choices.social}%`)}
+      ${row("Brand Awareness",r=>`${r.awareness.toFixed(0)}%`)}
+      ${row("Estimated Reach",r=>`${r.reach.toFixed(1)}M`)}
+      ${row("Leads",r=>Math.round(r.leads).toLocaleString())}
+      ${row("Estimated Sales",r=>r.sales.toLocaleString())}
+      ${row("Revenue",r=>moneyCr(r.revenue))}
+      ${row("ROI",r=>`${r.roi.toFixed(2)}×`)}
+      ${scoreRow}
+    </tbody></table></div>
+    <div class="vc-download-grid">${downloadButtons}</div>
+    <div class="vc-nav"><button class="vc-action vc-primary" onclick="vcDownloadAll()">⬇ Download All Results</button></div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function vcGoBack(){
+  const panel=document.getElementById("vcHistoryPanel");
+  if(panel){panel.remove();return;}
+  const finalVisible=!document.getElementById("final").classList.contains("hidden");
+  if(finalVisible){showSavedQuarter(3);return;}
+  const gameVisible=!document.getElementById("game").classList.contains("hidden");
+  if(!gameVisible) return;
+
+  if(current>0){
+    current--;
+    if(results[current]) showSavedQuarter(current); else loadQuarter();
+  }else{
+    alert("You are already at the first quarter.");
+  }
+}
+
+function vcStartNewSimulation(){
+  if(!confirm("Start a new simulation? This will clear the saved results from this browser.")) return;
+  localStorage.removeItem(VC_HISTORY_KEY);
+  sessionStorage.removeItem("vcStudent");
+  sessionStorage.removeItem("vcRoll");
+  location.reload();
+}
+
+function vcAddControls(){
+  if(document.getElementById("vcToolbar")) return;
+  const box=document.createElement("div");
+  box.id="vcToolbar"; box.className="vc-toolbar";
+  box.innerHTML=`<div><strong>Simulation Results</strong><div class="vc-note">Quarter results save automatically after each run.</div></div>
+    <div class="vc-nav"><button class="vc-action vc-secondary" onclick="vcShowHistory()">📊 Compare Results</button><button class="vc-action vc-secondary" onclick="vcDownloadAll()">⬇ Download All</button></div>`;
+  const app=document.querySelector(".app");
+  const topbar=document.querySelector(".topbar");
+  if(app && topbar) topbar.insertAdjacentElement("afterend",box);
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  vcAddControls();
+  window.vcHistory=JSON.parse(localStorage.getItem(VC_HISTORY_KEY)||"[]");
+  setToolbarVisible(false);
+});
+
+// Initialize labels on the start screen without creating a draft result.
+updateUI(false);
 </script>
 
 <!-- Instructor result submission -->
 <script>
-const VOLTCHARGE_SUBMIT_ENDPOINT = ""; 
+const VOLTCHARGE_SUBMIT_ENDPOINT = "";
 // Paste your Google Apps Script Web App URL between the quotes above.
-// Example: https://script.google.com/macros/s/XXXXXXXX/exec
 
-function submitFinalResult() {
-  if (!window.finalResults || !window.finalResults.student) {
+function submitFinalResult(){
+  if(!window.finalResults || !window.finalResults.student){
     alert("Please complete all four quarters before submitting.");
     return;
   }
+  if(!VOLTCHARGE_SUBMIT_ENDPOINT){showSubmissionSetup();return;}
 
-  if (!VOLTCHARGE_SUBMIT_ENDPOINT) {
-    showSubmissionSetup();
-    return;
-  }
-
-  const payload = {
-    timestamp: new Date().toISOString(),
-    studentName: window.finalResults.student.name || "",
-    rollNo: window.finalResults.student.roll || "",
-    finalScore: window.finalResults.totalScore || 0,
-    performance: window.finalResults.grade || "",
-    q1Score: window.finalResults.scores?.[0] || 0,
-    q2Score: window.finalResults.scores?.[1] || 0,
-    q3Score: window.finalResults.scores?.[2] || 0,
-    q4Score: window.finalResults.scores?.[3] || 0
+  const payload={
+    timestamp:new Date().toISOString(),
+    studentName:window.finalResults.student.name||"",
+    rollNo:window.finalResults.student.roll||"",
+    finalScore:window.finalResults.totalScore||0,
+    performance:window.finalResults.grade||"",
+    q1Score:window.finalResults.scores?.[0]||0,
+    q2Score:window.finalResults.scores?.[1]||0,
+    q3Score:window.finalResults.scores?.[2]||0,
+    q4Score:window.finalResults.scores?.[3]||0
   };
 
-  const btn = document.getElementById("submitResultBtn");
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Submitting...";
-  }
-
-  fetch(VOLTCHARGE_SUBMIT_ENDPOINT, {
-    method: "POST",
-    mode: "no-cors",
-    headers: {"Content-Type": "text/plain;charset=utf-8"},
-    body: JSON.stringify(payload)
-  }).then(() => {
-    if (btn) btn.textContent = "✓ Result Submitted";
+  const btn=document.getElementById("submitResultBtn");
+  if(btn){btn.disabled=true;btn.textContent="Submitting...";}
+  fetch(VOLTCHARGE_SUBMIT_ENDPOINT,{
+    method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)
+  }).then(()=>{
+    if(btn) btn.textContent="✓ Result Submitted";
     alert("Your result has been submitted successfully.");
-  }).catch(err => {
+  }).catch(err=>{
     console.error(err);
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = "Submit Result to Instructor";
-    }
+    if(btn){btn.disabled=false;btn.textContent="Submit Result to Instructor";}
     alert("Submission failed. Please try again or contact your instructor.");
   });
 }
 
-function showSubmissionSetup() {
-  const existing = document.getElementById("submissionSetupModal");
-  if (existing) existing.remove();
-
-  const modal = document.createElement("div");
-  modal.id = "submissionSetupModal";
-  modal.style.cssText = `
-    position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:9999;
-    display:flex; align-items:center; justify-content:center; padding:20px;
-  `;
-  modal.innerHTML = `
-    <div style="background:white;max-width:680px;width:100%;border-radius:18px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-      <h2 style="margin-top:0">Instructor submission setup</h2>
-      <p>The simulation is ready to send each student's final result to a Google Sheet.</p>
-      <ol style="line-height:1.65">
-        <li>Create a Google Sheet for the class.</li>
-        <li>Open <b>Extensions → Apps Script</b>.</li>
-        <li>Use the Apps Script code supplied with this simulation.</li>
-        <li>Deploy it as a <b>Web app</b> with access set to <b>Anyone</b>.</li>
-        <li>Paste the Web App URL into <code>VOLTCHARGE_SUBMIT_ENDPOINT</code> near the top of this HTML file.</li>
-      </ol>
-      <p><b>Important:</b> Do this once before distributing the student link.</p>
-      <button onclick="this.closest('#submissionSetupModal').remove()" style="padding:10px 18px;border:0;border-radius:9px;cursor:pointer">Close</button>
-    </div>`;
+function showSubmissionSetup(){
+  const existing=document.getElementById("submissionSetupModal");
+  if(existing) existing.remove();
+  const modal=document.createElement("div");
+  modal.id="submissionSetupModal"; modal.className="vc-overlay";
+  modal.innerHTML=`<div class="vc-modal" style="max-width:680px">
+    <h2 style="margin-top:0">Instructor submission setup</h2>
+    <p>The simulation is ready to send each student's final result to a Google Sheet.</p>
+    <ol style="line-height:1.65">
+      <li>Create a Google Sheet for the class.</li>
+      <li>Open <b>Extensions → Apps Script</b>.</li>
+      <li>Use the Apps Script code supplied with this simulation.</li>
+      <li>Deploy it as a <b>Web app</b> with access set to <b>Anyone</b>.</li>
+      <li>Paste the Web App URL into <code>VOLTCHARGE_SUBMIT_ENDPOINT</code> in this HTML file.</li>
+    </ol>
+    <p><b>Important:</b> Do this once before distributing the student link.</p>
+    <button class="vc-action vc-secondary" onclick="this.closest('#submissionSetupModal').remove()">Close</button>
+  </div>`;
   document.body.appendChild(modal);
 }
 </script>
 
-
-<script>
-/*
-  Submission bridge:
-  The existing simulation should assign its final result object to
-  window.finalResults when Q4 is completed. If the current code uses
-  different variable names, this bridge is harmless and the instructor
-  can set window.finalResults from the final-score function.
-*/
-</script>
-
-
-<style>
-.vc-nav{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
-.vc-nav button,.vc-action{border:0;border-radius:10px;padding:10px 15px;font-weight:700;cursor:pointer}
-.vc-secondary{background:#eef1f6}
-.vc-primary{background:#111827;color:#fff}
-.vc-panel{margin:18px 0;padding:18px;border:1px solid #e2e5ec;border-radius:16px;background:#fff}
-.vc-table{width:100%;border-collapse:collapse;font-size:14px}
-.vc-table th,.vc-table td{padding:9px;border-bottom:1px solid #e7e9ee;text-align:left}
-.vc-table th{font-weight:800}
-.vc-note{font-size:13px;color:#666}
-</style>
-<script>
-(function(){
-  const KEY="voltcharge_imc_history_v2";
-  window.vcHistory = JSON.parse(localStorage.getItem(KEY)||"[]");
-
-  function save(){ localStorage.setItem(KEY, JSON.stringify(window.vcHistory)); }
-
-  window.vcRecordQuarter = function(q, data){
-    const item = {
-      quarter:q,
-      time:new Date().toISOString(),
-      decisions:data.decisions||{},
-      awareness:data.awareness??"",
-      reach:data.reach??"",
-      leads:data.leads??"",
-      sales:data.sales??"",
-      revenue:data.revenue??"",
-      roi:data.roi??"",
-      score:data.score??"",
-      feedback:data.feedback||""
-    };
-    const i=window.vcHistory.findIndex(x=>x.quarter===q);
-    if(i>=0) window.vcHistory[i]=item; else window.vcHistory.push(item);
-    save();
-  };
-
-  window.vcDownloadQuarter = function(q){
-    const x=window.vcHistory.find(v=>v.quarter===q);
-    if(!x){alert("No saved result for this quarter yet.");return;}
-    const rows=[
-      ["VoltCharge India – IMC Simulation",""],
-      ["Quarter",x.quarter],["Date",new Date(x.time).toLocaleString()],
-      ["Awareness",x.awareness],["Reach",x.reach],["Leads",x.leads],
-      ["Sales",x.sales],["Revenue",x.revenue],["ROI",x.roi],["Quarter Score",x.score],
-      ["Feedback",x.feedback],["",""],["Decision","Value"]
-    ];
-    Object.entries(x.decisions).forEach(([k,v])=>rows.push([k,v]));
-    const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\\n");
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
-    a.download=`VoltCharge_${x.quarter.replace(/\\s+/g,"_")}_Result.csv`;
-    a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-  };
-
-  window.vcDownloadAll = function(){
-    if(!window.vcHistory.length){alert("No quarter results have been saved yet.");return;}
-    const rows=[["Quarter","Date","Awareness","Reach","Leads","Sales","Revenue","ROI","Score"]];
-    window.vcHistory.sort((a,b)=>a.quarter.localeCompare(b.quarter)).forEach(x=>{
-      rows.push([x.quarter,new Date(x.time).toLocaleString(),x.awareness,x.reach,x.leads,x.sales,x.revenue,x.roi,x.score]);
-    });
-    const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\\n");
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
-    a.download="VoltCharge_All_Quarter_Results.csv";
-    a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-  };
-
-  window.vcShowHistory = function(){
-    let p=document.getElementById("vcHistoryPanel");
-    if(!p){
-      p=document.createElement("div");p.id="vcHistoryPanel";p.className="vc-panel";
-      document.body.appendChild(p);
-    }
-    const h=window.vcHistory;
-    p.innerHTML=`<h2>My Simulation Results</h2>
-      <p class="vc-note">Results are saved in this browser, so you can go back and review previous quarters. They are not visible to other students.</p>
-      <div class="vc-nav">
-        <button class="vc-action vc-primary" onclick="vcDownloadAll()">Download All Results (CSV)</button>
-        <button class="vc-action vc-secondary" onclick="document.getElementById('vcHistoryPanel').remove()">Close</button>
-      </div>`+
-      (h.length?`<table class="vc-table"><thead><tr><th>Quarter</th><th>Awareness</th><th>Sales</th><th>ROI</th><th>Score</th><th></th></tr></thead><tbody>`+
-      h.map(x=>`<tr><td>${x.quarter}</td><td>${x.awareness}</td><td>${x.sales}</td><td>${x.roi}</td><td>${x.score}</td><td><button class="vc-action vc-secondary" onclick="vcDownloadQuarter('${x.quarter}')">Download</button></td></tr>`).join("")+
-      `</tbody></table>`:"<p>No quarter results saved yet.</p>");
-    p.scrollIntoView({behavior:"smooth"});
-  };
-
-  window.vcGoBack = function(){
-    if(confirm("Go back to the previous quarter? Your saved result will remain available.")){
-      history.back();
-    }
-  };
-
-  window.vcAddControls = function(){
-    if(document.getElementById("vcExtraControls")) return;
-    const box=document.createElement("div");box.id="vcExtraControls";box.className="vc-panel";
-    box.innerHTML=`<h3>Simulation Controls</h3>
-      <div class="vc-nav">
-        <button class="vc-action vc-secondary" onclick="vcShowHistory()">📊 View / Compare Results</button>
-        <button class="vc-action vc-secondary" onclick="vcDownloadAll()">⬇ Download All Results</button>
-      </div>
-      <p class="vc-note">Tip: save/download each quarter before experimenting with a new strategy. The browser keeps your results locally.</p>`;
-    const target=document.querySelector("main")||document.body;
-    target.insertBefore(box,target.firstChild);
-  };
-  document.addEventListener("DOMContentLoaded",vcAddControls);
-})();
-</script>
-
-<button class="vc-action vc-secondary" onclick="vcGoBack()" style="position:fixed;left:16px;bottom:16px;z-index:9998;">← Back</button>
+<button id="vcBackBtn" class="vc-action vc-secondary" onclick="vcGoBack()">← Back</button>
 </body>
 </html>
