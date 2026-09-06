@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoltCharge India — Strategic IMC Simulation</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:#f4f7fb;color:#172033}
+  .app{max-width:1100px;margin:auto;padding:24px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  .brand{font-weight:800;font-size:22px}
+  .pill{background:#e8eef8;padding:7px 12px;border-radius:999px;font-size:13px;font-weight:700}
+  .card{background:white;border-radius:18px;padding:28px;box-shadow:0 8px 30px rgba(30,50,80,.08);margin-bottom:18px}
+  h1,h2,h3{margin-top:0}
+  h1{font-size:34px;line-height:1.1}
+  h2{font-size:25px}
+  .muted{color:#687386}
+  .hero{padding:45px;text-align:center}
+  .hero p{max-width:720px;margin:15px auto 25px;line-height:1.65}
+  button{border:0;border-radius:11px;padding:12px 18px;font-weight:800;cursor:pointer;font-size:15px}
+  .primary{background:#172033;color:white}
+  .secondary{background:#edf2f8;color:#172033}
+  .danger{background:#b42318;color:white}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  input[type=text]{width:100%;padding:13px;border:1px solid #d7deea;border-radius:10px;font-size:16px}
+  .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:15px;max-width:700px;margin:25px auto}
+  label{font-weight:750;font-size:14px}
+  .field label{display:block;margin-bottom:7px}
+  .scenario{background:#f5f8fc;border-left:5px solid #172033;border-radius:10px;padding:18px;line-height:1.65;margin:18px 0}
+  .budget{display:flex;justify-content:space-between;align-items:center;background:#172033;color:white;border-radius:13px;padding:15px 18px;margin:18px 0}
+  .budget .warn{color:#ffcfcc}
+  .decisions{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .decision{border:1px solid #e0e6ef;border-radius:14px;padding:18px}
+  .decision.full{grid-column:1/-1}
+  .decision-title{font-weight:800;margin-bottom:10px}
+  .value{font-size:22px;font-weight:850;margin:8px 0}
+  input[type=range]{width:100%;accent-color:#172033}
+  .ends{display:flex;justify-content:space-between;font-size:12px;color:#778196}
+  .alloc-total{font-weight:800}
+  .alloc-total.bad{color:#b42318}
+  .alloc-total.good{color:#177245}
+  .allocation-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .mini{background:#f7f9fc;border-radius:10px;padding:12px}
+  .mini input{width:100%}
+  .actions{display:flex;justify-content:space-between;gap:12px;margin-top:22px}
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
+  .metric{background:#f5f8fc;border-radius:13px;padding:16px}
+  .metric .num{font-size:24px;font-weight:850;margin-top:5px}
+  .feedback{background:#f8f4e9;border-radius:13px;padding:18px;line-height:1.6}
+  .score-hidden{font-size:13px;color:#687386;text-align:center;margin-top:10px}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:12px;border-bottom:1px solid #e6eaf0}
+  th{font-size:13px;color:#687386}
+  .final-score{text-align:center;padding:30px;background:#172033;color:white;border-radius:18px}
+  .final-score .big{font-size:58px;font-weight:900}
+  .grade{font-size:22px;font-weight:800;margin-top:4px}
+  .debrief{line-height:1.7}
+  .hidden{display:none!important}
+  .progress{height:7px;background:#e4e9f1;border-radius:99px;overflow:hidden;margin-bottom:20px}
+  .progress>div{height:100%;background:#172033;transition:.3s}
+  @media(max-width:760px){
+    .app{padding:12px}.hero{padding:28px 18px}.formgrid,.decisions{grid-template-columns:1fr}
+    .decision.full{grid-column:auto}.metrics{grid-template-columns:1fr 1fr}.allocation-grid{grid-template-columns:1fr}
+    h1{font-size:28px}.actions{flex-direction:column}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">VoltCharge India</div>
+    <div id="quarterPill" class="pill hidden"></div>
+  </div>
+
+  <section id="start" class="card hero">
+    <h1>Strategic IMC Simulation</h1>
+    <p class="muted">
+      You are the communication strategist for VoltCharge Model S.
+      Make decisions across four changing market conditions. Your strategic performance
+      is evaluated internally, but your score is revealed only after Q4.
+    </p>
+    <div class="formgrid">
+      <div class="field">
+        <label for="studentName">Student name</label>
+        <input id="studentName" type="text" placeholder="Enter your name">
+      </div>
+      <div class="field">
+        <label for="rollNo">Roll number</label>
+        <input id="rollNo" type="text" placeholder="Enter roll number">
+      </div>
+    </div>
+    <button class="primary" onclick="startGame()">Start Simulation</button>
+  </section>
+
+  <section id="game" class="hidden">
+    <div class="progress"><div id="progressBar" style="width:25%"></div></div>
+
+    <div id="decisionScreen" class="card">
+      <h2 id="qTitle"></h2>
+      <div id="scenario" class="scenario"></div>
+
+      <div class="budget">
+        <span>Communication budget</span>
+        <strong id="budgetDisplay"></strong>
+      </div>
+
+      <div class="decisions">
+        <div class="decision">
+          <div class="decision-title">1. Communication Objective</div>
+          <div class="muted">Desired increase in brand awareness</div>
+          <div class="value"><span id="awarenessVal">25</span>%</div>
+          <input id="awareness" type="range" min="5" max="50" value="25" oninput="updateUI()">
+          <div class="ends"><span>5% — cautious</span><span>50% — highly ambitious</span></div>
+        </div>
+
+        <div class="decision">
+          <div class="decision-title">2. Creative Appeal</div>
+          <div class="muted">Balance between rational and emotional communication</div>
+          <div class="value"><span id="rationalVal">50</span>% Rational / <span id="emotionalVal">50</span>% Emotional</div>
+          <input id="rational" type="range" min="0" max="100" value="50" oninput="updateUI()">
+          <div class="ends"><span>100% Rational</span><span>100% Emotional</span></div>
+        </div>
+
+        <div class="decision full">
+          <div class="decision-title">3–5. Media Deployment</div>
+          <div class="muted">Allocate the budget across Digital/OTT, OOH/Experiential and Social Media. Any remaining budget automatically goes to other/traditional media.</div>
+          <div class="allocation-grid" style="margin-top:14px">
+            <div class="mini">
+              <strong>Digital & OTT</strong>
+              <div class="value"><span id="digitalVal">35</span>%</div>
+              <input id="digital" type="range" min="0" max="80" value="35" oninput="updateUI()">
+            </div>
+            <div class="mini">
+              <strong>OOH & Experiential</strong>
+              <div class="value"><span id="oohVal">20</span>%</div>
+              <input id="ooh" type="range" min="0" max="70" value="20" oninput="updateUI()">
+            </div>
+            <div class="mini">
+              <strong>Social Media</strong>
+              <div class="value"><span id="socialVal">20</span>%</div>
+              <input id="social" type="range" min="0" max="70" value="20" oninput="updateUI()">
+            </div>
+          </div>
+          <div style="margin-top:14px" class="alloc-total" id="allocationMessage"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="secondary" onclick="resetChoices()">Reset choices</button>
+        <button id="lockBtn" class="primary" onclick="runQuarter()">Lock Strategy & Run Quarter</button>
+      </div>
+      <div class="score-hidden">Your quarter score is not shown during the simulation.</div>
+    </div>
+
+    <div id="resultScreen" class="card hidden">
+      <h2 id="resultTitle"></h2>
+      <div class="metrics">
+        <div class="metric"><div class="muted">Brand Awareness</div><div class="num" id="rAwareness"></div></div>
+        <div class="metric"><div class="muted">Estimated Reach</div><div class="num" id="rReach"></div></div>
+        <div class="metric"><div class="muted">Leads</div><div class="num" id="rLeads"></div></div>
+        <div class="metric"><div class="muted">Estimated Sales</div><div class="num" id="rSales"></div></div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><div class="muted">Revenue</div><div class="num" id="rRevenue"></div></div>
+        <div class="metric"><div class="muted">ROI</div><div class="num" id="rROI"></div></div>
+        <div class="metric"><div class="muted">Digital spend</div><div class="num" id="rDigital"></div></div>
+        <div class="metric"><div class="muted">Social spend</div><div class="num" id="rSocial"></div></div>
+      </div>
+      <div class="feedback">
+        <strong>Management Feedback</strong>
+        <p id="feedbackText"></p>
+      </div>
+      <div class="actions">
+        <span></span>
+        <button id="nextBtn" class="primary" onclick="nextQuarter()">Next Quarter</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="final" class="hidden">
+    <div class="card">
+      <div class="final-score">
+        <div>FINAL IMC PERFORMANCE</div>
+        <div class="big" id="finalScore"></div>
+        <div class="grade" id="finalGrade"></div>
+        <div id="studentSummary" style="margin-top:10px;opacity:.85"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Four-Quarter Performance Dashboard</h2>
+      <table>
+        <thead><tr><th>Metric</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th></tr></thead>
+        <tbody>
+          <tr><td>Awareness</td><td id="dA1"></td><td id="dA2"></td><td id="dA3"></td><td id="dA4"></td></tr>
+          <tr><td>Sales</td><td id="dS1"></td><td id="dS2"></td><td id="dS3"></td><td id="dS4"></td></tr>
+          <tr><td>Revenue</td><td id="dR1"></td><td id="dR2"></td><td id="dR3"></td><td id="dR4"></td></tr>
+          <tr><td>ROI</td><td id="dROI1"></td><td id="dROI2"></td><td id="dROI3"></td><td id="dROI4"></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card debrief">
+      <h2>Debrief Questions</h2>
+      <ol>
+        <li>Why did your ROI change across the four quarters?</li>
+        <li>How did your strategy change when the competitor attacked?</li>
+        <li>Which communication channel did you reduce during the slowdown, and why?</li>
+        <li>Did your creative appeal change as the market changed?</li>
+        <li>How did you balance awareness-building with conversion?</li>
+      </ol>
+      <button class="secondary" onclick="location.reload()">Start New Simulation</button>
+    </div>
+  </section>
+</div>
+
+<script>
+const quarters = [
+  {
+    title:"Q1 — THE GRAND LAUNCH",
+    budget:4,
+    situation:`<strong>VoltCharge Model S is entering the Indian premium EV market.</strong><br>
+    Brand awareness is only 10%. Consumer sentiment toward EVs is positive, but VoltCharge is an unknown brand.
+    <br><br><strong>Strategic challenge:</strong> Build awareness, establish positioning and create interest.`,
+    target:{awareness:25,rational:50,digital:38,ooh:20,social:22},
+    weights:{aw:1.0,creative:.9,digital:1,ooh:.8,social:.9},
+    baseReach:2.2, baseLeads:6500, baseSales:900, baseRevenue:13.0
+  },
+  {
+    title:"Q2 — COMPETITOR COUNTER-ATTACK",
+    budget:5,
+    situation:`<strong>HeroMotors has responded aggressively.</strong><br>
+    The competitor has reduced its EV price by 15% and launched a major rational campaign emphasizing specifications, price and value.
+    Your budget increases to ₹5 crore, but media costs have increased.
+    <br><br><strong>Strategic challenge:</strong> Differentiate rather than automatically copying the competitor.`,
+    target:{awareness:20,rational:38,digital:36,ooh:15,social:27},
+    weights:{aw:.8,creative:1.15,digital:1,social:1.15,ooh:.7},
+    baseReach:2.4, baseLeads:6800, baseSales:980, baseRevenue:14.8
+  },
+  {
+    title:"Q3 — ECONOMIC SLOWDOWN",
+    budget:2.5,
+    situation:`<strong>The Indian automobile market enters a severe economic slowdown.</strong><br>
+    Consumers become more price-conscious, corporate spending falls, and VoltCharge's communication budget is reduced to ₹2.5 crore.
+    OOH becomes relatively expensive and inefficient.
+    <br><br><strong>Strategic challenge:</strong> Decide what to cut while emphasizing value, running cost, total cost of ownership and practical financial benefits.`,
+    target:{awareness:14,rational:72,digital:43,ooh:5,social:32},
+    weights:{aw:.65,creative:1.15,digital:1.15,ooh:.35,social:1.1},
+    baseReach:1.35, baseLeads:4800, baseSales:650, baseRevenue:9.4
+  },
+  {
+    title:"Q4 — MARKET RECOVERY / FINAL PUSH",
+    budget:4,
+    situation:`<strong>Economic conditions begin to improve.</strong><br>
+    EV interest is recovering, competitors are increasing promotional activity, and VoltCharge now has significantly higher awareness than at launch.
+    <br><br><strong>Strategic challenge:</strong> The objective is no longer simply awareness. Convert awareness into action and sales.`,
+    target:{awareness:18,rational:55,digital:40,ooh:12,social:30},
+    weights:{aw:.8,creative:1.0,digital:1.15,ooh:.65,social:1.2},
+    baseReach:2.35, baseLeads:7600, baseSales:1180, baseRevenue:17.7
+  }
+];
+
+let current=0, results=[], choices={};
+
+function startGame(){
+  const name=document.getElementById("studentName").value.trim();
+  const roll=document.getElementById("rollNo").value.trim();
+  if(!name || !roll){alert("Please enter your name and roll number.");return;}
+  sessionStorage.setItem("vcStudent",name);
+  sessionStorage.setItem("vcRoll",roll);
+  document.getElementById("start").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+  loadQuarter();
+}
+
+function loadQuarter(){
+  const q=quarters[current];
+  document.getElementById("quarterPill").classList.remove("hidden");
+  document.getElementById("quarterPill").textContent=`Quarter ${current+1} of 4`;
+  document.getElementById("progressBar").style.width=((current+1)*25)+"%";
+  document.getElementById("decisionScreen").classList.remove("hidden");
+  document.getElementById("resultScreen").classList.add("hidden");
+  document.getElementById("qTitle").textContent=q.title;
+  document.getElementById("scenario").innerHTML=q.situation;
+  document.getElementById("budgetDisplay").textContent=`₹${q.budget} crore`;
+  resetChoices();
+}
+
+function resetChoices(){
+  document.getElementById("awareness").value=25;
+  document.getElementById("rational").value=50;
+  document.getElementById("digital").value=35;
+  document.getElementById("ooh").value=20;
+  document.getElementById("social").value=20;
+  updateUI();
+}
+
+function updateUI(){
+  const a=+document.getElementById("awareness").value;
+  const r=+document.getElementById("rational").value;
+  const d=+document.getElementById("digital").value;
+  const o=+document.getElementById("ooh").value;
+  const s=+document.getElementById("social").value;
+  document.getElementById("awarenessVal").textContent=a;
+  document.getElementById("rationalVal").textContent=r;
+  document.getElementById("emotionalVal").textContent=100-r;
+  document.getElementById("digitalVal").textContent=d;
+  document.getElementById("oohVal").textContent=o;
+  document.getElementById("socialVal").textContent=s;
+  const total=d+o+s;
+  const msg=document.getElementById("allocationMessage");
+  if(total>100){
+    msg.textContent=`Media allocation: ${total}% — reduce by ${total-100} percentage points.`;
+    msg.className="alloc-total bad";
+    document.getElementById("lockBtn").disabled=true;
+  }else{
+    msg.textContent=`Media allocation: ${total}% — ${100-total}% automatically remains for other/traditional media.`;
+    msg.className="alloc-total good";
+    document.getElementById("lockBtn").disabled=false;
+  }
+}
+
+function distance(actual,target,range){
+  return Math.max(0,1-Math.abs(actual-target)/range);
+}
+
+function scoreQuarter(q,c){
+  const creative=distance(c.rational,q.target.rational,50);
+  const aw=distance(c.awareness,q.target.awareness,25);
+  const dig=distance(c.digital,q.target.digital,45);
+  const ooh=distance(c.ooh,q.target.ooh,40);
+  const soc=distance(c.social,q.target.social,40);
+
+  // Hidden internal scoring: 5 + 5 + 7 + 4 + 4 = 25.
+  const strategic=5*(.55*aw+.45*creative);
+  const creativeScore=5*creative;
+  const media=7*((q.weights.digital*dig+q.weights.ooh*ooh+q.weights.social*soc)/(q.weights.digital+q.weights.ooh+q.weights.social));
+  const totalAlloc=c.digital+c.ooh+c.social;
+  const efficiency=4*Math.max(0,1-Math.abs(totalAlloc-(q.target.digital+q.target.ooh+q.target.social))/70);
+  const integration=4*(.45*creative+.25*dig+.15*soc+.15*aw);
+  return Math.max(0,Math.min(25,strategic+creativeScore+media+efficiency+integration));
+}
+
+function runQuarter(){
+  const q=quarters[current];
+  const c={
+    awareness:+document.getElementById("awareness").value,
+    rational:+document.getElementById("rational").value,
+    digital:+document.getElementById("digital").value,
+    ooh:+document.getElementById("ooh").value,
+    social:+document.getElementById("social").value
+  };
+  choices=c;
+  const internalScore=scoreQuarter(q,c);
+  const quality=0.72+(internalScore/25)*0.42;
+  const noise=0.94+Math.random()*0.12;
+
+  let awareness;
+  if(current===0) awareness=10 + (c.awareness*0.62 + internalScore*0.30)*quality;
+  else {
+    const prev=results[current-1].awareness;
+    awareness=Math.min(92,prev + (c.awareness*0.38 + internalScore*0.28)*quality);
+  }
+  awareness=Math.max(10,Math.min(92,awareness));
+
+  const reach=q.baseReach*(0.72+quality*.45)*(0.72+c.digital/100*.75+c.social/100*.42)*noise;
+  const leads=q.baseLeads*(0.68+quality*.48)*(0.70+c.digital/100*.45+c.social/100*.35)*(0.82+awareness/100*.35)*noise;
+  const conversion=current===3 ? 0.125+internalScore*.0012 : 0.105+internalScore*.0010;
+  const sales=Math.max(0,Math.round(q.baseSales*(0.65+quality*.35)*(0.72+awareness/100*.45)*conversion/0.13*noise));
+  const revenue=(sales*(q.baseRevenue*10000000/q.baseSales))/10000000;
+  const roi=revenue/q.budget;
+
+  results.push({awareness,reach,leads,sales,revenue,roi,score:internalScore,choices:c});
+  showResult(awareness,reach,leads,sales,revenue,roi);
+}
+
+function showResult(awareness,reach,leads,sales,revenue,roi){
+  document.getElementById("decisionScreen").classList.add("hidden");
+  document.getElementById("resultScreen").classList.remove("hidden");
+  document.getElementById("resultTitle").textContent=`${quarters[current].title} — Market Response`;
+  document.getElementById("rAwareness").textContent=awareness.toFixed(0)+"%";
+  document.getElementById("rReach").textContent=reach.toFixed(1)+"M";
+  document.getElementById("rLeads").textContent=Math.round(leads).toLocaleString();
+  document.getElementById("rSales").textContent=sales.toLocaleString();
+  document.getElementById("rRevenue").textContent="₹"+revenue.toFixed(1)+" Cr";
+  document.getElementById("rROI").textContent=roi.toFixed(2)+"×";
+  document.getElementById("rDigital").textContent=(quarters[current].budget*choices.digital/100).toFixed(2)+" Cr";
+  document.getElementById("rSocial").textContent=(quarters[current].budget*choices.social/100).toFixed(2)+" Cr";
+  document.getElementById("feedbackText").textContent=feedback();
+  document.getElementById("nextBtn").textContent=current===3?"View Final Performance":"Next Quarter";
+}
+
+function feedback(){
+  const q=quarters[current], c=choices;
+  const comments=[];
+  if(c.awareness>38) comments.push("Your awareness ambition was high; ambitious objectives require strong media support.");
+  else if(c.awareness<12) comments.push("Your conservative awareness objective limited the scale of the communication opportunity.");
+  if(current===1 && c.rational>65) comments.push("The competitor's rational positioning created an opportunity for VoltCharge to differentiate rather than mirror the message.");
+  if(current===2 && c.ooh>20) comments.push("OOH was relatively inefficient during the slowdown, reducing the effectiveness of the media investment.");
+  if(current===2 && c.rational<45) comments.push("The market became more price-conscious, so stronger value and practical-benefit communication would have helped.");
+  if(current===3 && c.social+c.digital<55) comments.push("The final push needed stronger digital/social support to convert awareness into action.");
+  if(comments.length===0){
+    if(current===0) comments.push("Your launch created a credible platform for building awareness and consideration.");
+    if(current===1) comments.push("Your response shows an attempt to differentiate while maintaining market relevance.");
+    if(current===2) comments.push("Your media choices show adaptation to tighter budgets and a more value-conscious consumer.");
+    if(current===3) comments.push("Your strategy reflects the shift from awareness-building toward conversion and sales.");
+  }
+  return comments.join(" ");
+}
+
+function nextQuarter(){
+  if(current===3){showFinal();return;}
+  current++;
+  loadQuarter();
+}
+
+function showFinal(){
+  document.getElementById("game").classList.add("hidden");
+  document.getElementById("quarterPill").classList.add("hidden");
+  document.getElementById("final").classList.remove("hidden");
+  const total=Math.round(results.reduce((sum,r)=>sum+r.score,0));
+  document.getElementById("finalScore").textContent=total+"/100";
+  let grade=total>=90?"Outstanding IMC Strategist":total>=80?"Excellent":total>=70?"Good":total>=60?"Satisfactory":total>=50?"Needs Improvement":"Weak Strategic Performance";
+  document.getElementById("finalGrade").textContent=grade;
+  const name=sessionStorage.getItem("vcStudent"), roll=sessionStorage.getItem("vcRoll");
+  document.getElementById("studentSummary").textContent=`${name} • Roll No. ${roll}`;
+
+  results.forEach((r,i)=>{
+    document.getElementById("dA"+(i+1)).textContent=r.awareness.toFixed(0)+"%";
+    document.getElementById("dS"+(i+1)).textContent=r.sales.toLocaleString();
+    document.getElementById("dR"+(i+1)).textContent="₹"+r.revenue.toFixed(1)+" Cr";
+    document.getElementById("dROI"+(i+1)).textContent=r.roi.toFixed(2)+"×";
+  });
+}
+updateUI();
+</script>
+</body>
+</html>
