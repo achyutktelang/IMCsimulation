@@ -97,7 +97,16 @@
     <div class="progress"><div id="progressBar" style="width:25%"></div></div>
 
     <div id="decisionScreen" class="card">
-      <h2 id="qTitle"></h2>
+      
+<div id="instructorSubmissionBox" style="margin:24px 0;padding:20px;border-radius:16px;background:#f6f7fb;border:1px solid #e2e5ec;text-align:center;">
+  <h3 style="margin:0 0 8px;">Submit Your Result</h3>
+  <p style="margin:0 0 15px;color:#555;">Once you have reviewed your final score, submit it to your instructor.</p>
+  <button id="submitResultBtn" onclick="submitFinalResult()" style="padding:12px 22px;border:0;border-radius:10px;font-weight:700;cursor:pointer;">
+    Submit Result to Instructor
+  </button>
+</div>
+
+<h2 id="qTitle"></h2>
       <div id="scenario" class="scenario"></div>
 
       <div class="budget">
@@ -424,6 +433,14 @@ function showFinal(){
   const name=sessionStorage.getItem("vcStudent"), roll=sessionStorage.getItem("vcRoll");
   document.getElementById("studentSummary").textContent=`${name} • Roll No. ${roll}`;
 
+  // Make the completed result available to the instructor-submission button.
+  window.finalResults = {
+    student: { name: name || "", roll: roll || "" },
+    totalScore: total,
+    grade: grade,
+    scores: results.map(r => Math.round(r.score))
+  };
+
   results.forEach((r,i)=>{
     document.getElementById("dA"+(i+1)).textContent=r.awareness.toFixed(0)+"%";
     document.getElementById("dS"+(i+1)).textContent=r.sales.toLocaleString();
@@ -433,5 +450,211 @@ function showFinal(){
 }
 updateUI();
 </script>
+
+<!-- Instructor result submission -->
+<script>
+const VOLTCHARGE_SUBMIT_ENDPOINT = ""; 
+// Paste your Google Apps Script Web App URL between the quotes above.
+// Example: https://script.google.com/macros/s/XXXXXXXX/exec
+
+function submitFinalResult() {
+  if (!window.finalResults || !window.finalResults.student) {
+    alert("Please complete all four quarters before submitting.");
+    return;
+  }
+
+  if (!VOLTCHARGE_SUBMIT_ENDPOINT) {
+    showSubmissionSetup();
+    return;
+  }
+
+  const payload = {
+    timestamp: new Date().toISOString(),
+    studentName: window.finalResults.student.name || "",
+    rollNo: window.finalResults.student.roll || "",
+    finalScore: window.finalResults.totalScore || 0,
+    performance: window.finalResults.grade || "",
+    q1Score: window.finalResults.scores?.[0] || 0,
+    q2Score: window.finalResults.scores?.[1] || 0,
+    q3Score: window.finalResults.scores?.[2] || 0,
+    q4Score: window.finalResults.scores?.[3] || 0
+  };
+
+  const btn = document.getElementById("submitResultBtn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Submitting...";
+  }
+
+  fetch(VOLTCHARGE_SUBMIT_ENDPOINT, {
+    method: "POST",
+    mode: "no-cors",
+    headers: {"Content-Type": "text/plain;charset=utf-8"},
+    body: JSON.stringify(payload)
+  }).then(() => {
+    if (btn) btn.textContent = "✓ Result Submitted";
+    alert("Your result has been submitted successfully.");
+  }).catch(err => {
+    console.error(err);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Submit Result to Instructor";
+    }
+    alert("Submission failed. Please try again or contact your instructor.");
+  });
+}
+
+function showSubmissionSetup() {
+  const existing = document.getElementById("submissionSetupModal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "submissionSetupModal";
+  modal.style.cssText = `
+    position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:9999;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  `;
+  modal.innerHTML = `
+    <div style="background:white;max-width:680px;width:100%;border-radius:18px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <h2 style="margin-top:0">Instructor submission setup</h2>
+      <p>The simulation is ready to send each student's final result to a Google Sheet.</p>
+      <ol style="line-height:1.65">
+        <li>Create a Google Sheet for the class.</li>
+        <li>Open <b>Extensions → Apps Script</b>.</li>
+        <li>Use the Apps Script code supplied with this simulation.</li>
+        <li>Deploy it as a <b>Web app</b> with access set to <b>Anyone</b>.</li>
+        <li>Paste the Web App URL into <code>VOLTCHARGE_SUBMIT_ENDPOINT</code> near the top of this HTML file.</li>
+      </ol>
+      <p><b>Important:</b> Do this once before distributing the student link.</p>
+      <button onclick="this.closest('#submissionSetupModal').remove()" style="padding:10px 18px;border:0;border-radius:9px;cursor:pointer">Close</button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+</script>
+
+
+<script>
+/*
+  Submission bridge:
+  The existing simulation should assign its final result object to
+  window.finalResults when Q4 is completed. If the current code uses
+  different variable names, this bridge is harmless and the instructor
+  can set window.finalResults from the final-score function.
+*/
+</script>
+
+
+<style>
+.vc-nav{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.vc-nav button,.vc-action{border:0;border-radius:10px;padding:10px 15px;font-weight:700;cursor:pointer}
+.vc-secondary{background:#eef1f6}
+.vc-primary{background:#111827;color:#fff}
+.vc-panel{margin:18px 0;padding:18px;border:1px solid #e2e5ec;border-radius:16px;background:#fff}
+.vc-table{width:100%;border-collapse:collapse;font-size:14px}
+.vc-table th,.vc-table td{padding:9px;border-bottom:1px solid #e7e9ee;text-align:left}
+.vc-table th{font-weight:800}
+.vc-note{font-size:13px;color:#666}
+</style>
+<script>
+(function(){
+  const KEY="voltcharge_imc_history_v2";
+  window.vcHistory = JSON.parse(localStorage.getItem(KEY)||"[]");
+
+  function save(){ localStorage.setItem(KEY, JSON.stringify(window.vcHistory)); }
+
+  window.vcRecordQuarter = function(q, data){
+    const item = {
+      quarter:q,
+      time:new Date().toISOString(),
+      decisions:data.decisions||{},
+      awareness:data.awareness??"",
+      reach:data.reach??"",
+      leads:data.leads??"",
+      sales:data.sales??"",
+      revenue:data.revenue??"",
+      roi:data.roi??"",
+      score:data.score??"",
+      feedback:data.feedback||""
+    };
+    const i=window.vcHistory.findIndex(x=>x.quarter===q);
+    if(i>=0) window.vcHistory[i]=item; else window.vcHistory.push(item);
+    save();
+  };
+
+  window.vcDownloadQuarter = function(q){
+    const x=window.vcHistory.find(v=>v.quarter===q);
+    if(!x){alert("No saved result for this quarter yet.");return;}
+    const rows=[
+      ["VoltCharge India – IMC Simulation",""],
+      ["Quarter",x.quarter],["Date",new Date(x.time).toLocaleString()],
+      ["Awareness",x.awareness],["Reach",x.reach],["Leads",x.leads],
+      ["Sales",x.sales],["Revenue",x.revenue],["ROI",x.roi],["Quarter Score",x.score],
+      ["Feedback",x.feedback],["",""],["Decision","Value"]
+    ];
+    Object.entries(x.decisions).forEach(([k,v])=>rows.push([k,v]));
+    const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\\n");
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+    a.download=`VoltCharge_${x.quarter.replace(/\\s+/g,"_")}_Result.csv`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  };
+
+  window.vcDownloadAll = function(){
+    if(!window.vcHistory.length){alert("No quarter results have been saved yet.");return;}
+    const rows=[["Quarter","Date","Awareness","Reach","Leads","Sales","Revenue","ROI","Score"]];
+    window.vcHistory.sort((a,b)=>a.quarter.localeCompare(b.quarter)).forEach(x=>{
+      rows.push([x.quarter,new Date(x.time).toLocaleString(),x.awareness,x.reach,x.leads,x.sales,x.revenue,x.roi,x.score]);
+    });
+    const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\\n");
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+    a.download="VoltCharge_All_Quarter_Results.csv";
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  };
+
+  window.vcShowHistory = function(){
+    let p=document.getElementById("vcHistoryPanel");
+    if(!p){
+      p=document.createElement("div");p.id="vcHistoryPanel";p.className="vc-panel";
+      document.body.appendChild(p);
+    }
+    const h=window.vcHistory;
+    p.innerHTML=`<h2>My Simulation Results</h2>
+      <p class="vc-note">Results are saved in this browser, so you can go back and review previous quarters. They are not visible to other students.</p>
+      <div class="vc-nav">
+        <button class="vc-action vc-primary" onclick="vcDownloadAll()">Download All Results (CSV)</button>
+        <button class="vc-action vc-secondary" onclick="document.getElementById('vcHistoryPanel').remove()">Close</button>
+      </div>`+
+      (h.length?`<table class="vc-table"><thead><tr><th>Quarter</th><th>Awareness</th><th>Sales</th><th>ROI</th><th>Score</th><th></th></tr></thead><tbody>`+
+      h.map(x=>`<tr><td>${x.quarter}</td><td>${x.awareness}</td><td>${x.sales}</td><td>${x.roi}</td><td>${x.score}</td><td><button class="vc-action vc-secondary" onclick="vcDownloadQuarter('${x.quarter}')">Download</button></td></tr>`).join("")+
+      `</tbody></table>`:"<p>No quarter results saved yet.</p>");
+    p.scrollIntoView({behavior:"smooth"});
+  };
+
+  window.vcGoBack = function(){
+    if(confirm("Go back to the previous quarter? Your saved result will remain available.")){
+      history.back();
+    }
+  };
+
+  window.vcAddControls = function(){
+    if(document.getElementById("vcExtraControls")) return;
+    const box=document.createElement("div");box.id="vcExtraControls";box.className="vc-panel";
+    box.innerHTML=`<h3>Simulation Controls</h3>
+      <div class="vc-nav">
+        <button class="vc-action vc-secondary" onclick="vcShowHistory()">📊 View / Compare Results</button>
+        <button class="vc-action vc-secondary" onclick="vcDownloadAll()">⬇ Download All Results</button>
+      </div>
+      <p class="vc-note">Tip: save/download each quarter before experimenting with a new strategy. The browser keeps your results locally.</p>`;
+    const target=document.querySelector("main")||document.body;
+    target.insertBefore(box,target.firstChild);
+  };
+  document.addEventListener("DOMContentLoaded",vcAddControls);
+})();
+</script>
+
+<button class="vc-action vc-secondary" onclick="vcGoBack()" style="position:fixed;left:16px;bottom:16px;z-index:9998;">← Back</button>
 </body>
 </html>
