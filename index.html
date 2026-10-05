@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VoltCharge India — Strategic IMC Simulation</title>
+<title>VoltCharge India — Strategic IMC Simulation | Build 4.3</title>
 <style>
   *{box-sizing:border-box}
   body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:#f4f7fb;color:#172033}
@@ -70,7 +70,10 @@
 <div class="app">
   <div class="topbar">
     <div class="brand">VoltCharge India</div>
-    <div id="quarterPill" class="pill hidden"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+      <div id="quarterPill" class="pill hidden"></div>
+      <div class="pill" title="Use this label to confirm the latest classroom version is live">Build 4.3 • Submit First</div>
+    </div>
   </div>
 
   <section id="start" class="card hero">
@@ -78,7 +81,7 @@
     <p class="muted">
       You are the communication strategist for VoltCharge Model S.
       Make decisions across four changing market conditions. Your strategic performance
-      is evaluated internally, but your score is revealed only after Q4.
+      is evaluated internally, but Q4 results and your final score are revealed only after the completed attempt is submitted.
     </p>
     <div class="formgrid">
       <div class="field">
@@ -180,45 +183,73 @@
   </section>
 
   <section id="final" class="hidden">
-    <div class="card">
-      <div class="final-score">
-        <div>FINAL IMC PERFORMANCE</div>
-        <div class="big" id="finalScore"></div>
-        <div class="grade" id="finalGrade"></div>
-        <div id="studentSummary" style="margin-top:10px;opacity:.85"></div>
+    <div id="submissionGate" class="card">
+      <h2>Submit Your Simulation</h2>
+      <p class="muted"><strong>Your attempt is now locked.</strong> Q4 results, quarter scores, the final score, dashboard and charts are hidden until this completed attempt is submitted. If this page is refreshed or reopened before submission, you will return to this same locked screen.</p>
+      <div class="vc-submit-gate">
+        <button id="submitResultBtn" class="vc-action vc-primary" onclick="submitFinalResult()">Submit and See Your Score</button>
+        <div id="submitStatus" class="vc-note" aria-live="polite"></div>
       </div>
     </div>
-    <div class="card">
-      <h2>Four-Quarter Performance Dashboard</h2>
-      <table>
-        <thead><tr><th>Metric</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th></tr></thead>
-        <tbody>
-          <tr><td>Awareness</td><td id="dA1"></td><td id="dA2"></td><td id="dA3"></td><td id="dA4"></td></tr>
-          <tr><td>Sales</td><td id="dS1"></td><td id="dS2"></td><td id="dS3"></td><td id="dS4"></td></tr>
-          <tr><td>Revenue</td><td id="dR1"></td><td id="dR2"></td><td id="dR3"></td><td id="dR4"></td></tr>
-          <tr><td>ROI</td><td id="dROI1"></td><td id="dROI2"></td><td id="dROI3"></td><td id="dROI4"></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="card" id="finalActionsCard">
-      <h2>Save / Submit Your Result</h2>
-      <p class="muted">Your four quarter results are now complete. You can compare them, download individual quarter files, download the complete simulation record, or submit the final score to your instructor.</p>
-      <div class="vc-nav">
-        <button class="vc-action vc-secondary" onclick="vcShowHistory()">📊 Compare Results</button>
-        <button class="vc-action vc-secondary" onclick="vcDownloadAll()">⬇ Download All Results</button>
-        <button id="submitResultBtn" class="vc-action vc-primary" onclick="submitFinalResult()">Submit Result to Instructor</button>
+
+    <div id="postSubmitContent" class="hidden">
+      <div class="card">
+        <div class="final-score">
+          <div>FINAL IMC PERFORMANCE</div>
+          <div class="big" id="finalScore"></div>
+          <div class="grade" id="finalGrade"></div>
+          <div id="studentSummary" style="margin-top:10px;opacity:.85"></div>
+        </div>
       </div>
-    </div>
-    <div class="card debrief">
-      <h2>Debrief Questions</h2>
-      <ol>
-        <li>Why did your ROI change across the four quarters?</li>
-        <li>How did your strategy change when the competitor attacked?</li>
-        <li>Which communication channel did you reduce during the slowdown, and why?</li>
-        <li>Did your creative appeal change as the market changed?</li>
-        <li>How did you balance awareness-building with conversion?</li>
-      </ol>
-      <button class="secondary" onclick="vcStartNewSimulation()">Start New Simulation</button>
+
+      <div class="card">
+        <h2>Four-Quarter Performance Dashboard</h2>
+        <table>
+          <thead><tr><th>Metric</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th></tr></thead>
+          <tbody>
+            <tr><td>Quarter Score</td><td id="dScore1"></td><td id="dScore2"></td><td id="dScore3"></td><td id="dScore4"></td></tr>
+            <tr><td>Awareness</td><td id="dA1"></td><td id="dA2"></td><td id="dA3"></td><td id="dA4"></td></tr>
+            <tr><td>Sales</td><td id="dS1"></td><td id="dS2"></td><td id="dS3"></td><td id="dS4"></td></tr>
+            <tr><td>Revenue</td><td id="dR1"></td><td id="dR2"></td><td id="dR3"></td><td id="dR4"></td></tr>
+            <tr><td>ROI</td><td id="dROI1"></td><td id="dROI2"></td><td id="dROI3"></td><td id="dROI4"></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Performance Charts</h2>
+        <p class="muted">The charts show how your strategy and market outcomes changed across the four quarters.</p>
+        <div class="vc-chart-grid">
+          <div class="vc-chart-card"><h3>Quarter Score</h3><div id="chartScore"></div></div>
+          <div class="vc-chart-card"><h3>Brand Awareness</h3><div id="chartAwareness"></div></div>
+          <div class="vc-chart-card"><h3>Estimated Sales</h3><div id="chartSales"></div></div>
+          <div class="vc-chart-card"><h3>ROI (revenue / budget)</h3><div id="chartROI"></div></div>
+          <div class="vc-chart-card"><h3>Estimated Reach (millions)</h3><div id="chartReach"></div></div>
+          <div class="vc-chart-card"><h3>Leads</h3><div id="chartLeads"></div></div>
+          <div class="vc-chart-card"><h3>Revenue (₹ crore)</h3><div id="chartRevenue"></div></div>
+        </div>
+      </div>
+
+      <div class="card" id="finalActionsCard">
+        <h2>Review / Download Your Result</h2>
+        <p class="muted">Your submitted attempt is now locked. You can compare the four quarters and download your completed simulation record.</p>
+        <div class="vc-nav">
+          <button class="vc-action vc-secondary" onclick="vcShowHistory()">📊 Compare Results</button>
+          <button class="vc-action vc-secondary" onclick="vcDownloadAll()">⬇ Download All Results</button>
+        </div>
+      </div>
+
+      <div class="card debrief">
+        <h2>Debrief Questions</h2>
+        <ol>
+          <li>Why did your ROI change across the four quarters?</li>
+          <li>How did your strategy change when the competitor attacked?</li>
+          <li>Which communication channel did you reduce during the slowdown, and why?</li>
+          <li>Did your creative appeal change as the market changed?</li>
+          <li>How did you balance awareness-building with conversion?</li>
+        </ol>
+        <button class="secondary" onclick="vcStartNewSimulation()">Start New Simulation</button>
+      </div>
     </div>
   </section>
 </div>
@@ -238,6 +269,16 @@
 .vc-table th,.vc-table td{padding:10px;border-bottom:1px solid #e7e9ee;text-align:left;vertical-align:top}
 .vc-table th{font-weight:800;color:#4b5563}
 .vc-note{font-size:13px;color:#667085;line-height:1.5}
+.vc-submit-gate{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:18px}
+.vc-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+.vc-chart-card{border:1px solid #e2e5ec;border-radius:14px;padding:16px;background:#f8fafc}
+.vc-chart-card h3{margin:0 0 14px;font-size:16px}
+.vc-chart-row{display:grid;grid-template-columns:34px 1fr 86px;gap:10px;align-items:center;margin:10px 0}
+.vc-chart-q{font-weight:800;font-size:13px}
+.vc-chart-track{height:18px;background:#e7ebf1;border-radius:999px;overflow:hidden}
+.vc-chart-bar{height:100%;background:#172033;border-radius:999px;min-width:0;transition:width .4s ease}
+.vc-chart-value{text-align:right;font-weight:800;font-size:13px;white-space:nowrap}
+@media(max-width:760px){.vc-chart-grid{grid-template-columns:1fr}.vc-chart-row{grid-template-columns:30px 1fr 78px}}
 .vc-download-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}
 .vc-download-grid button{width:100%}
 #vcBackBtn{display:none;position:fixed;left:16px;bottom:16px;z-index:9998;box-shadow:0 5px 18px rgba(0,0,0,.12)}
@@ -291,6 +332,7 @@ const quarters = [
 ];
 
 const VC_HISTORY_KEY="voltcharge_imc_history_v3";
+const VC_PENDING_KEY="voltcharge_imc_pending_submission_v42";
 let current=0;
 let results=[];
 let choices={};
@@ -372,6 +414,13 @@ function setToolbarVisible(visible){
 }
 
 function startGame(){
+  // A completed attempt cannot be discarded by refreshing/restarting before submission.
+  if(localStorage.getItem(VC_PENDING_KEY)){
+    restorePendingAttempt();
+    alert("Your previous completed attempt is awaiting submission. Submit it before starting another attempt.");
+    return;
+  }
+
   const name=document.getElementById("studentName").value.trim();
   const roll=document.getElementById("rollNo").value.trim();
   if(!name || !roll){alert("Please enter your name and roll number.");return;}
@@ -381,6 +430,7 @@ function startGame(){
   current=0; results=[]; choices={}; drafts={}; window.vcHistory=[];
   localStorage.removeItem(VC_HISTORY_KEY);
   window.finalResults=null;
+  window.vcScoreUnlocked=false;
 
   document.getElementById("start").classList.add("hidden");
   document.getElementById("final").classList.add("hidden");
@@ -433,276 +483,60 @@ function distance(actual,target,range){
   return Math.max(0,1-Math.abs(actual-target)/range);
 }
 
-/*
-  CURRENT-QUARTER STRATEGIC FIT
-  Measures whether the student's strategy is appropriate
-  for the current market situation.
-  Raw score = 0–25.
-*/
 function currentFitScore(q,c){
   const creative=distance(c.rational,q.target.rational,50);
   const aw=distance(c.awareness,q.target.awareness,25);
   const dig=distance(c.digital,q.target.digital,45);
   const ooh=distance(c.ooh,q.target.ooh,40);
   const soc=distance(c.social,q.target.social,40);
-
   const strategic=5*(.55*aw+.45*creative);
   const creativeScore=5*creative;
-
-  const media=7*(
-    (q.weights.digital*dig+
-     q.weights.ooh*ooh+
-     q.weights.social*soc) /
-    (q.weights.digital+q.weights.ooh+q.weights.social)
-  );
-
+  const media=7*((q.weights.digital*dig+q.weights.ooh*ooh+q.weights.social*soc)/(q.weights.digital+q.weights.ooh+q.weights.social));
   const totalAlloc=c.digital+c.ooh+c.social;
-
-  const efficiency=4*Math.max(
-    0,
-    1-Math.abs(
-      totalAlloc-
-      (q.target.digital+q.target.ooh+q.target.social)
-    )/70
-  );
-
-  const integration=4*(
-    .45*creative+
-    .25*dig+
-    .15*soc+
-    .15*aw
-  );
-
-  return Math.max(
-    0,
-    Math.min(
-      25,
-      strategic+
-      creativeScore+
-      media+
-      efficiency+
-      integration
-    )
-  );
+  const efficiency=4*Math.max(0,1-Math.abs(totalAlloc-(q.target.digital+q.target.ooh+q.target.social))/70);
+  const integration=4*(.45*creative+.25*dig+.15*soc+.15*aw);
+  return Math.max(0,Math.min(25,strategic+creativeScore+media+efficiency+integration));
 }
 
-
-/*
-  Converts a strategic movement into a score from 0–1.
-
-  Example:
-  If Rational communication is expected to increase by
-  approximately 30 points and the student increases it by 15,
-  the student receives approximately half the available
-  adaptation credit.
-*/
 function directionalCredit(change,direction,fullChange){
-
-  if(direction==="up"){
-    return Math.max(
-      0,
-      Math.min(1,change/fullChange)
-    );
-  }
-
-  if(direction==="down"){
-    return Math.max(
-      0,
-      Math.min(1,(-change)/fullChange)
-    );
-  }
-
+  if(direction==="up") return Math.max(0,Math.min(1,change/fullChange));
+  if(direction==="down") return Math.max(0,Math.min(1,(-change)/fullChange));
   return 0;
 }
 
-
-/*
-  ADAPTATION SCORE — MAXIMUM 13
-
-  Measures whether the student CHANGED strategy appropriately
-  when the market situation changed.
-*/
 function adaptationScore(index,c){
-
   if(index===0) return 0;
-
   const previousResult=results[index-1];
-
-  if(!previousResult || !previousResult.choices){
-    return 0;
-  }
-
+  if(!previousResult || !previousResult.choices) return 0;
   const p=previousResult.choices;
-
   let score=0;
-
-
-  /*
-    Q2 — COMPETITOR COUNTER-ATTACK
-
-    Expected response:
-    - Reduce pure awareness emphasis
-    - Become less rational / more emotionally differentiated
-    - Reduce launch-style OOH somewhat
-    - Increase Social Media
-  */
   if(index===1){
-
-    score += 2 * directionalCredit(
-      c.awareness-p.awareness,
-      "down",
-      5
-    );
-
-    score += 5 * directionalCredit(
-      c.rational-p.rational,
-      "down",
-      12
-    );
-
-    score += 2 * directionalCredit(
-      c.ooh-p.ooh,
-      "down",
-      5
-    );
-
-    score += 4 * directionalCredit(
-      c.social-p.social,
-      "up",
-      5
-    );
-  }
-
-
-  /*
-    Q3 — ECONOMIC SLOWDOWN
-
-    Expected response:
-    - Reduce awareness ambition
-    - Increase rational/value communication strongly
-    - Increase efficient Digital allocation
-    - Cut inefficient OOH strongly
-    - Increase/maintain strong Social Media
-  */
-  else if(index===2){
-
-    score += 2 * directionalCredit(
-      c.awareness-p.awareness,
-      "down",
-      6
-    );
-
-    score += 4 * directionalCredit(
-      c.rational-p.rational,
-      "up",
-      30
-    );
-
-    score += 2 * directionalCredit(
-      c.digital-p.digital,
-      "up",
-      7
-    );
-
-    score += 3 * directionalCredit(
-      c.ooh-p.ooh,
-      "down",
-      10
-    );
-
-    score += 2 * directionalCredit(
-      c.social-p.social,
-      "up",
-      5
-    );
-  }
-
-
-  /*
-    Q4 — MARKET RECOVERY / CONVERSION
-
-    Expected response:
-    - Increase awareness ambition modestly
-    - Move away from recession-level rational messaging
-    - Allow some recovery in OOH/experiential
-    - Keep Digital + Social strong for conversion
-  */
-  else if(index===3){
-
-    score += 2 * directionalCredit(
-      c.awareness-p.awareness,
-      "up",
-      4
-    );
-
-    score += 4 * directionalCredit(
-      c.rational-p.rational,
-      "down",
-      15
-    );
-
-    score += 2 * directionalCredit(
-      c.ooh-p.ooh,
-      "up",
-      7
-    );
-
-    /*
-      Conversion media score.
-      55% or below = no additional credit.
-      70% Digital + Social = full 5 marks.
-    */
+    score += 2*directionalCredit(c.awareness-p.awareness,"down",5);
+    score += 5*directionalCredit(c.rational-p.rational,"down",12);
+    score += 2*directionalCredit(c.ooh-p.ooh,"down",5);
+    score += 4*directionalCredit(c.social-p.social,"up",5);
+  } else if(index===2){
+    score += 2*directionalCredit(c.awareness-p.awareness,"down",6);
+    score += 4*directionalCredit(c.rational-p.rational,"up",30);
+    score += 2*directionalCredit(c.digital-p.digital,"up",7);
+    score += 3*directionalCredit(c.ooh-p.ooh,"down",10);
+    score += 2*directionalCredit(c.social-p.social,"up",5);
+  } else if(index===3){
+    score += 2*directionalCredit(c.awareness-p.awareness,"up",4);
+    score += 4*directionalCredit(c.rational-p.rational,"down",15);
+    score += 2*directionalCredit(c.ooh-p.ooh,"up",7);
     const conversionMix=c.digital+c.social;
-
-    const conversionCredit=Math.max(
-      0,
-      Math.min(
-        1,
-        (conversionMix-55)/15
-      )
-    );
-
+    const conversionCredit=Math.max(0,Math.min(1,(conversionMix-55)/15));
     score += 5*conversionCredit;
   }
-
-  return Math.max(
-    0,
-    Math.min(13,score)
-  );
+  return Math.max(0,Math.min(13,score));
 }
 
-
-/*
-  FINAL QUARTER SCORE
-
-  Q1:
-  25 marks for selecting an appropriate launch strategy.
-
-  Q2–Q4:
-  12 marks = strategy appropriate for current situation
-  13 marks = appropriate adaptation from previous quarter
-*/
 function scoreQuarter(q,c){
-
   const fit=currentFitScore(q,c);
-
-  // Q1 has no previous quarter.
-  if(current===0){
-    return fit;
-  }
-
+  if(current===0) return fit;
   const adaptation=adaptationScore(current,c);
-
-  const fitComponent=12*(fit/25);
-
-  const total=
-    fitComponent+
-    adaptation;
-
-  return Math.max(
-    0,
-    Math.min(25,total)
-  );
+  return Math.max(0,Math.min(25,12*(fit/25)+adaptation));
 }
 
 function feedbackFor(index,c){
@@ -756,7 +590,12 @@ function runQuarter(){
   // Critical integration: the simulation result and saved/downloadable result are the SAME object.
   results[current]=result;
   vcRecordQuarter(current,result);
-  showSavedQuarter(current);
+
+  // Q1-Q3 show market response so students can learn and adapt.
+  // Q4 is different: once the final decision is locked, the attempt must be
+  // submitted BEFORE Q4 outcomes, scores, dashboard or charts are revealed.
+  if(current===3) showFinal();
+  else showSavedQuarter(current);
 }
 
 function populateResult(index){
@@ -773,7 +612,7 @@ function populateResult(index){
   document.getElementById("rDigital").textContent=(quarters[index].budget*r.choices.digital/100).toFixed(2)+" Cr";
   document.getElementById("rSocial").textContent=(quarters[index].budget*r.choices.social/100).toFixed(2)+" Cr";
   document.getElementById("feedbackText").textContent=r.feedback;
-  document.getElementById("nextBtn").textContent=index===3?"View Final Performance":"Next Quarter";
+  document.getElementById("nextBtn").textContent=index===3?"Submit Completed Attempt":"Next Quarter";
 }
 
 function showSavedQuarter(index){
@@ -800,33 +639,116 @@ function nextQuarter(){
 }
 
 function showFinal(){
+  if(window.vcScoreUnlocked===true && window.finalResults){
+    document.getElementById("game").classList.add("hidden");
+    document.getElementById("final").classList.remove("hidden");
+    document.getElementById("quarterPill").classList.add("hidden");
+    revealFinalResults();
+    return;
+  }
   if(!simulationComplete()){alert("Please complete all four quarters first.");return;}
   document.getElementById("game").classList.add("hidden");
   document.getElementById("quarterPill").classList.add("hidden");
   document.getElementById("final").classList.remove("hidden");
-  setToolbarVisible(true);
+  document.getElementById("submissionGate").classList.remove("hidden");
+  document.getElementById("postSubmitContent").classList.add("hidden");
+  setToolbarVisible(false);
+  window.vcScoreUnlocked=false;
 
   const total=Math.round(results.reduce((sum,r)=>sum+(r?.score||0),0));
-  document.getElementById("finalScore").textContent=total+"/100";
   const grade=total>=90?"Outstanding IMC Strategist":total>=80?"Excellent":total>=70?"Good":total>=60?"Satisfactory":total>=50?"Needs Improvement":"Weak Strategic Performance";
-  document.getElementById("finalGrade").textContent=grade;
   const name=sessionStorage.getItem("vcStudent")||"";
   const roll=sessionStorage.getItem("vcRoll")||"";
-  document.getElementById("studentSummary").textContent=`${name} • Roll No. ${roll}`;
 
   window.finalResults={
     student:{name,roll}, totalScore:total, grade,
-    scores:results.map(r=>Math.round(r.score)),
+    scores:results.map(r=>Number(r.score.toFixed(2))),
     quarters:results.map((r,i)=>({quarter:qLabel(i),...r}))
   };
+  syncHistoryFromResults();
 
+  // Persist the completed-but-unsubmitted attempt. This closes the refresh loophole:
+  // refreshing or reopening the page restores this gate instead of starting a new try.
+  try{
+    localStorage.setItem(VC_PENDING_KEY,JSON.stringify({
+      results:results,
+      finalResults:window.finalResults,
+      history:window.vcHistory
+    }));
+  }catch(err){console.error("Could not persist pending attempt",err);}
+}
+
+function restorePendingAttempt(){
+  let pending=null;
+  try{pending=JSON.parse(localStorage.getItem(VC_PENDING_KEY)||"null");}catch(err){pending=null;}
+  if(!pending || !Array.isArray(pending.results) || pending.results.length!==4 || !pending.finalResults) return false;
+
+  results=pending.results;
+  current=3;
+  choices=results[3]?.choices?{...results[3].choices}:{};
+  drafts={};
+  results.forEach((r,i)=>{if(r?.choices) drafts[i]={...r.choices};});
+  window.finalResults=pending.finalResults;
+  window.vcHistory=Array.isArray(pending.history)?pending.history:[];
+  window.vcScoreUnlocked=false;
+
+  const name=window.finalResults?.student?.name||"";
+  const roll=window.finalResults?.student?.roll||"";
+  if(name) sessionStorage.setItem("vcStudent",name);
+  if(roll) sessionStorage.setItem("vcRoll",roll);
+
+  document.getElementById("start").classList.add("hidden");
+  document.getElementById("game").classList.add("hidden");
+  document.getElementById("quarterPill").classList.add("hidden");
+  document.getElementById("final").classList.remove("hidden");
+  document.getElementById("submissionGate").classList.remove("hidden");
+  document.getElementById("postSubmitContent").classList.add("hidden");
+  const btn=document.getElementById("submitResultBtn");
+  const status=document.getElementById("submitStatus");
+  if(btn){btn.disabled=false;btn.textContent="Submit and See Your Score";}
+  if(status) status.textContent="This completed attempt is awaiting submission.";
+  setToolbarVisible(false);
+  return true;
+}
+
+function renderBarChart(containerId,values,maxValue,formatter){
+  const box=document.getElementById(containerId);
+  if(!box) return;
+  const nums=values.map(v=>Number(v)||0);
+  const max=maxValue || Math.max(...nums,1);
+  box.innerHTML=nums.map((value,i)=>{
+    const width=max>0?Math.max(0,Math.min(100,(value/max)*100)):0;
+    return `<div class="vc-chart-row"><div class="vc-chart-q">Q${i+1}</div><div class="vc-chart-track"><div class="vc-chart-bar" style="width:${width}%"></div></div><div class="vc-chart-value">${formatter(value)}</div></div>`;
+  }).join("");
+}
+
+function renderFinalCharts(){
+  renderBarChart("chartReach",results.map(r=>r.reach),null,v=>v.toFixed(1)+"M");
+  renderBarChart("chartLeads",results.map(r=>r.leads),null,v=>Math.round(v).toLocaleString());
+  renderBarChart("chartRevenue",results.map(r=>r.revenue),null,v=>"₹"+v.toFixed(1)+" Cr");
+  renderBarChart("chartScore",results.map(r=>r.score),25,v=>v.toFixed(1)+"/25");
+  renderBarChart("chartAwareness",results.map(r=>r.awareness),100,v=>v.toFixed(0)+"%");
+  renderBarChart("chartSales",results.map(r=>r.sales),null,v=>Math.round(v).toLocaleString());
+  renderBarChart("chartROI",results.map(r=>r.roi),null,v=>v.toFixed(2)+"×");
+}
+
+function revealFinalResults(){
+  if(!window.finalResults) return;
+  window.vcScoreUnlocked=true;
+  document.getElementById("submissionGate").classList.add("hidden");
+  document.getElementById("postSubmitContent").classList.remove("hidden");
+  document.getElementById("finalScore").textContent=window.finalResults.totalScore+"/100";
+  document.getElementById("finalGrade").textContent=window.finalResults.grade;
+  document.getElementById("studentSummary").textContent=`${window.finalResults.student.name} • Roll No. ${window.finalResults.student.roll}`;
   results.forEach((r,i)=>{
+    document.getElementById("dScore"+(i+1)).textContent=r.score.toFixed(1)+"/25";
     document.getElementById("dA"+(i+1)).textContent=r.awareness.toFixed(0)+"%";
     document.getElementById("dS"+(i+1)).textContent=r.sales.toLocaleString();
     document.getElementById("dR"+(i+1)).textContent=moneyCr(r.revenue);
     document.getElementById("dROI"+(i+1)).textContent=r.roi.toFixed(2)+"×";
   });
-  syncHistoryFromResults();
+  renderFinalCharts();
+  setToolbarVisible(true);
 }
 
 function csvCell(v){ return `"${String(v??"").replaceAll('"','""')}"`; }
@@ -860,21 +782,21 @@ function vcDownloadQuarter(q){
     ["Leads",Math.round(Number(x.leads))],["Estimated Sales",x.sales],["Revenue",moneyCr(x.revenue)],["ROI",`${Number(x.roi).toFixed(2)}×`],
     ["Management Feedback",x.feedback]
   ];
-  if(simulationComplete()) rows.push(["Quarter Score",Math.round(Number(x.score))+"/25"]);
-  else rows.push(["Quarter Score","Hidden until Q4 is completed"]);
+  if(window.vcScoreUnlocked===true) rows.push(["Quarter Score",Number(x.score).toFixed(2)+"/25"]);
+  else rows.push(["Quarter Score","Hidden until submission"]);
   downloadCSV(`VoltCharge_${x.quarter}_Result.csv`,rows);
 }
 
 function vcDownloadAll(){
   if(!window.vcHistory.length){alert("No quarter results have been saved yet.");return;}
-  const complete=simulationComplete();
+  const unlocked=window.vcScoreUnlocked===true;
   const rows=[["Student Name","Roll Number","Quarter","Awareness Objective %","Rational %","Emotional %","Digital %","OOH %","Social %","Other/Traditional %","Brand Awareness %","Reach (M)","Leads","Sales","Revenue (Cr)","ROI","Quarter Score","Feedback"]];
   [...window.vcHistory].sort((a,b)=>a.quarterIndex-b.quarterIndex).forEach(x=>{
     const d=x.decisions||{};
     const other=Math.max(0,100-(Number(d.digital||0)+Number(d.ooh||0)+Number(d.social||0)));
-    rows.push([x.studentName,x.rollNo,x.quarter,d.awareness,d.rational,100-Number(d.rational||0),d.digital,d.ooh,d.social,other,Number(x.awareness).toFixed(0),Number(x.reach).toFixed(1),Math.round(Number(x.leads)),x.sales,Number(x.revenue).toFixed(2),Number(x.roi).toFixed(2),complete?Math.round(Number(x.score)):"Hidden",x.feedback]);
+    rows.push([x.studentName,x.rollNo,x.quarter,d.awareness,d.rational,100-Number(d.rational||0),d.digital,d.ooh,d.social,other,Number(x.awareness).toFixed(0),Number(x.reach).toFixed(1),Math.round(Number(x.leads)),x.sales,Number(x.revenue).toFixed(2),Number(x.roi).toFixed(2),unlocked?Number(x.score).toFixed(2):"Hidden",x.feedback]);
   });
-  if(complete && window.finalResults) rows.push([], ["Final Score",window.finalResults.totalScore+"/100"],["Performance",window.finalResults.grade]);
+  if(unlocked && window.finalResults) rows.push([], ["Final Score",window.finalResults.totalScore+"/100"],["Performance",window.finalResults.grade]);
   downloadCSV("VoltCharge_All_Quarter_Results.csv",rows);
 }
 
@@ -884,16 +806,16 @@ function vcShowHistory(){
   const h=[...window.vcHistory].sort((a,b)=>a.quarterIndex-b.quarterIndex);
   const overlay=document.createElement("div");
   overlay.id="vcHistoryPanel"; overlay.className="vc-overlay";
-  const complete=simulationComplete();
+  const unlocked=window.vcScoreUnlocked===true;
   const quarterHeaders=[0,1,2,3].map(i=>`<th>${results[i]?qLabel(i):"—"}</th>`).join("");
   const val=(i,fn)=>results[i]?fn(results[i]):"—";
   const row=(label,fn)=>`<tr><td><strong>${label}</strong></td>${[0,1,2,3].map(i=>`<td>${val(i,fn)}</td>`).join("")}</tr>`;
   const downloadButtons=[0,1,2,3].map(i=>results[i]?`<button class="vc-action vc-secondary" onclick="vcDownloadQuarter(${i})">⬇ ${qLabel(i)}</button>`:`<button class="vc-action vc-secondary" disabled>⬇ ${qLabel(i)}</button>`).join("");
-  const scoreRow=complete?row("Quarter Score",r=>`${Math.round(r.score)}/25`):"";
+  const scoreRow=unlocked?row("Quarter Score",r=>`${Number(r.score).toFixed(2)}/25`):"";
 
   overlay.innerHTML=`<div class="vc-modal">
     <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap">
-      <div><h2 style="margin-bottom:6px">Compare Quarter Results</h2><p class="vc-note" style="margin-top:0">Each completed quarter is saved automatically when you click “Lock Strategy & Run Quarter”. Internal quarter scores remain hidden until Q4 is complete.</p></div>
+      <div><h2 style="margin-bottom:6px">Compare Quarter Results</h2><p class="vc-note" style="margin-top:0">Each completed quarter is saved automatically when you click “Lock Strategy & Run Quarter”. Quarter and final scores remain hidden until the completed attempt is submitted.</p></div>
       <button class="vc-action vc-secondary" onclick="document.getElementById('vcHistoryPanel').remove()">✕ Close</button>
     </div>
     <div style="overflow:auto"><table class="vc-table"><thead><tr><th>Metric / Decision</th>${quarterHeaders}</tr></thead><tbody>
@@ -921,7 +843,14 @@ function vcGoBack(){
   const panel=document.getElementById("vcHistoryPanel");
   if(panel){panel.remove();return;}
   const finalVisible=!document.getElementById("final").classList.contains("hidden");
-  if(finalVisible){showSavedQuarter(3);return;}
+  if(finalVisible){
+    if(window.vcScoreUnlocked!==true){
+      alert("This completed attempt is locked until it is submitted.");
+      return;
+    }
+    showSavedQuarter(3);
+    return;
+  }
   const gameVisible=!document.getElementById("game").classList.contains("hidden");
   if(!gameVisible) return;
 
@@ -934,6 +863,11 @@ function vcGoBack(){
 }
 
 function vcStartNewSimulation(){
+  if(localStorage.getItem(VC_PENDING_KEY) && window.vcScoreUnlocked!==true){
+    alert("Submit the completed attempt before starting a new simulation.");
+    restorePendingAttempt();
+    return;
+  }
   if(!confirm("Start a new simulation? This will clear the saved results from this browser.")) return;
   localStorage.removeItem(VC_HISTORY_KEY);
   sessionStorage.removeItem("vcStudent");
@@ -955,7 +889,9 @@ function vcAddControls(){
 document.addEventListener("DOMContentLoaded",()=>{
   vcAddControls();
   window.vcHistory=JSON.parse(localStorage.getItem(VC_HISTORY_KEY)||"[]");
+  window.vcScoreUnlocked=false;
   setToolbarVisible(false);
+  restorePendingAttempt();
 });
 
 // Initialize labels on the start screen without creating a draft result.
@@ -974,29 +910,67 @@ function submitFinalResult(){
   }
   if(!VOLTCHARGE_SUBMIT_ENDPOINT){showSubmissionSetup();return;}
 
+  const quarterData=window.finalResults.quarters||[];
+  const getDecision=(quarterIndex,key)=>quarterData?.[quarterIndex]?.choices?.[key] ?? "";
+
   const payload={
     timestamp:new Date().toISOString(),
     studentName:window.finalResults.student.name||"",
     rollNo:window.finalResults.student.roll||"",
+
+    // Q1 strategy + score
+    q1Awareness:getDecision(0,"awareness"),
+    q1Rational:getDecision(0,"rational"),
+    q1Digital:getDecision(0,"digital"),
+    q1OOH:getDecision(0,"ooh"),
+    q1Social:getDecision(0,"social"),
+    q1Score:window.finalResults.scores?.[0] ?? "",
+
+    // Q2 strategy + score
+    q2Awareness:getDecision(1,"awareness"),
+    q2Rational:getDecision(1,"rational"),
+    q2Digital:getDecision(1,"digital"),
+    q2OOH:getDecision(1,"ooh"),
+    q2Social:getDecision(1,"social"),
+    q2Score:window.finalResults.scores?.[1] ?? "",
+
+    // Q3 strategy + score
+    q3Awareness:getDecision(2,"awareness"),
+    q3Rational:getDecision(2,"rational"),
+    q3Digital:getDecision(2,"digital"),
+    q3OOH:getDecision(2,"ooh"),
+    q3Social:getDecision(2,"social"),
+    q3Score:window.finalResults.scores?.[2] ?? "",
+
+    // Q4 strategy + score
+    q4Awareness:getDecision(3,"awareness"),
+    q4Rational:getDecision(3,"rational"),
+    q4Digital:getDecision(3,"digital"),
+    q4OOH:getDecision(3,"ooh"),
+    q4Social:getDecision(3,"social"),
+    q4Score:window.finalResults.scores?.[3] ?? "",
+
     finalScore:window.finalResults.totalScore||0,
-    performance:window.finalResults.grade||"",
-    q1Score:window.finalResults.scores?.[0]||0,
-    q2Score:window.finalResults.scores?.[1]||0,
-    q3Score:window.finalResults.scores?.[2]||0,
-    q4Score:window.finalResults.scores?.[3]||0
+    performance:window.finalResults.grade||""
   };
 
   const btn=document.getElementById("submitResultBtn");
+  const status=document.getElementById("submitStatus");
+  if(status) status.textContent="Sending your completed attempt...";
   if(btn){btn.disabled=true;btn.textContent="Submitting...";}
   fetch(VOLTCHARGE_SUBMIT_ENDPOINT,{
     method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)
   }).then(()=>{
-    if(btn) btn.textContent="✓ Result Submitted";
-    alert("Your result has been submitted successfully.");
+    // In no-cors mode the browser can confirm the request was dispatched, but cannot
+    // inspect Google's response body. Your existing Sheet endpoint is already in use.
+    localStorage.removeItem(VC_PENDING_KEY);
+    if(btn) btn.textContent="✓ Submitted";
+    if(status) status.textContent="Submission sent. Your score is now unlocked.";
+    revealFinalResults();
   }).catch(err=>{
     console.error(err);
-    if(btn){btn.disabled=false;btn.textContent="Submit Result to Instructor";}
-    alert("Submission failed. Please try again or contact your instructor.");
+    if(btn){btn.disabled=false;btn.textContent="Submit and See Your Score";}
+    if(status) status.textContent="Submission failed. Your score is still locked. Please try again or contact your instructor.";
   });
 }
 
@@ -1007,11 +981,11 @@ function showSubmissionSetup(){
   modal.id="submissionSetupModal"; modal.className="vc-overlay";
   modal.innerHTML=`<div class="vc-modal" style="max-width:680px">
     <h2 style="margin-top:0">Instructor submission setup</h2>
-    <p>The simulation is ready to send each student's final result to a Google Sheet.</p>
+    <p>The simulation is ready to send each student's Q1–Q4 strategy decisions, quarter scores and final result to a Google Sheet.</p>
     <ol style="line-height:1.65">
       <li>Create a Google Sheet for the class.</li>
       <li>Open <b>Extensions → Apps Script</b>.</li>
-      <li>Use the Apps Script code supplied with this simulation.</li>
+      <li>Use the matching Apps Script code supplied with this simulation (VoltCharge_Google_Sheets_Apps_Script.gs).</li>
       <li>Deploy it as a <b>Web app</b> with access set to <b>Anyone</b>.</li>
       <li>Paste the Web App URL into <code>VOLTCHARGE_SUBMIT_ENDPOINT</code> in this HTML file.</li>
     </ol>
